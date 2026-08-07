@@ -27,6 +27,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .config-grid label{display:block;font-size:12px;font-weight:500;color:#6B7280;margin-bottom:4px}
 .config-grid input{width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:#F9FAFB;transition:all .2s}
 .config-grid input:focus{border-color:#6366F1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.banner-upload-field{margin-top:12px}
+.banner-upload-field .label-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.banner-preview{width:100%;max-width:375px;aspect-ratio:750/350;background:#F3F4F6;border-radius:8px;overflow:hidden;position:relative;cursor:pointer;border:1.5px dashed #E5E7EB;transition:all .2s}
+.banner-preview:hover{border-color:#6366F1}
+.banner-preview img{width:100%;height:100%;object-fit:cover}
+.banner-preview .preview-placeholder{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:13px}
+.banner-preview.has-image{border-style:solid}
+.banner-preview.has-image .preview-placeholder{display:none}
+.banner-remove{font-size:11px;color:#EF4444;cursor:pointer;display:none}
+.banner-remove.visible{display:inline}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
 .toolbar input[type=text]{flex:1;min-width:160px;padding:9px 14px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#F9FAFB;transition:all .2s}
 .toolbar input[type=text]:focus{border-color:#6366F1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
@@ -88,6 +98,17 @@ table tr:hover{background:#F9FAFB}
         <label>活动地点</label>
         <input type="text" id="cfg-location" placeholder="如：广州国际会议中心">
       </div>
+    </div>
+    <div class="banner-upload-field">
+      <div class="label-row">
+        <label style="font-size:12px;font-weight:500;color:#6B7280">报名页封面图（750×350，选填）</label>
+        <span class="banner-remove" id="cfg-banner-remove">移除图片</span>
+      </div>
+      <div class="banner-preview" id="cfg-banner-preview" onclick="document.getElementById('cfg-banner-file').click()">
+        <img id="cfg-banner-img" src="" alt="" style="display:none">
+        <span class="preview-placeholder">点击上传封面图</span>
+      </div>
+      <input type="file" id="cfg-banner-file" accept="image/*" style="display:none">
     </div>
     <div style="margin-top:14px">
       <button class="btn btn-primary" id="save-config">保存配置</button>
@@ -165,6 +186,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
   function init(){
     loadConfigForm();
+    bindBannerUpload();
+    bindBannerRemove();
     loadStats();
     loadTable();
     updateEntryQRLabel();
@@ -201,15 +224,77 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     document.getElementById('cfg-name').value = c.eventName || '';
     document.getElementById('cfg-date').value = c.eventDate || '';
     document.getElementById('cfg-location').value = c.eventLocation || '';
+    // Load banner preview
+    loadBannerPreview(c);
+  }
+
+  function loadBannerPreview(c){
+    var img = document.getElementById('cfg-banner-img');
+    var preview = document.getElementById('cfg-banner-preview');
+    var removeBtn = document.getElementById('cfg-banner-remove');
+    if(c.bannerImage){
+      img.src = c.bannerImage;
+      img.style.display = 'block';
+      preview.classList.add('has-image');
+      removeBtn.classList.add('visible');
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      preview.classList.remove('has-image');
+      removeBtn.classList.remove('visible');
+    }
+  }
+
+  function bindBannerUpload(){
+    var fileInput = document.getElementById('cfg-banner-file');
+    fileInput.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      if(!file.type.match(/image\//)){ showToast('请选择图片文件','error'); return; }
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          var maxW = 1500;
+          if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          var config = getConfig();
+          config.bannerImage = dataUrl;
+          setConfig(config);
+          loadBannerPreview(config);
+          showToast('封面图已保存','success');
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function bindBannerRemove(){
+    document.getElementById('cfg-banner-remove').addEventListener('click', function(e){
+      e.stopPropagation();
+      var config = getConfig();
+      delete config.bannerImage;
+      setConfig(config);
+      loadBannerPreview(config);
+      showToast('封面图已移除','success');
+    });
   }
 
   function bindConfigSave(){
     document.getElementById('save-config').addEventListener('click',function(){
+      var existing = getConfig();
       setConfig({
         eventName: document.getElementById('cfg-name').value.trim(),
         eventDate: document.getElementById('cfg-date').value.trim(),
         eventLocation: document.getElementById('cfg-location').value.trim(),
-        entryUrl: document.getElementById('entry-url-override').value.trim()
+        entryUrl: document.getElementById('entry-url-override').value.trim(),
+        bannerImage: existing.bannerImage || ''
       });
       updateEntryQRLabel();
       showToast('配置已保存，入口二维码已就绪','success');
