@@ -112,6 +112,8 @@ table tr:hover{background:#F9FAFB}
     </div>
     <div style="margin-top:14px">
       <button class="btn btn-primary" id="save-config">保存配置</button>
+      <button class="btn btn-outline" id="download-config-json" style="margin-top:8px">下载配置文件 (config.json)</button>
+      <p style="font-size:11px;color:#9CA3AF;margin-top:6px">下载后告知大跳，自动推送到云端 → 客户扫码即可看到封面图和活动信息</p>
     </div>
   </div>
 
@@ -201,6 +203,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     bindSearch();
     bindFilter();
     bindConfigSave();
+    bindConfigDownload();
     bindDataOps();
     // 刷新二维码按钮
     document.getElementById('refresh-entry-qr').addEventListener('click', function(){
@@ -289,15 +292,33 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   function bindConfigSave(){
     document.getElementById('save-config').addEventListener('click',function(){
       var existing = getConfig();
-      setConfig({
+      var config = {
         eventName: document.getElementById('cfg-name').value.trim(),
         eventDate: document.getElementById('cfg-date').value.trim(),
         eventLocation: document.getElementById('cfg-location').value.trim(),
         entryUrl: document.getElementById('entry-url-override').value.trim(),
         bannerImage: existing.bannerImage || ''
-      });
+      };
+      setConfig(config);
       updateEntryQRLabel();
       showToast('配置已保存，入口二维码已就绪','success');
+    });
+  }
+
+  function bindConfigDownload(){
+    document.getElementById('download-config-json').addEventListener('click', function(){
+      var config = getConfig();
+      var json = JSON.stringify(config, null, 2);
+      var blob = new Blob([json], {type: 'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'config.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('config.json 已下载，告诉我「推送到云端」即可同步','success');
     });
   }
 
