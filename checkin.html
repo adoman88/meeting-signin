@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>现场签到</title>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#F9FAFB;color:#1F2937;line-height:1.6;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #F3F4F6;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.header h1{font-size:17px;font-weight:600;color:#6366F1}
+.header .nav-links a{font-size:12px;color:#6B7280;text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid #E5E7EB;margin-left:6px;transition:all .2s}
+.header .nav-links a:hover{color:#6366F1;border-color:#6366F1;background:#F5F3FF}
+.container{max-width:520px;width:100%;margin:0 auto;padding:20px 16px}
+.tabs{display:flex;background:#fff;border-radius:14px;padding:4px;margin-bottom:16px;border:1px solid #F3F4F6}
+.tab{flex:1;padding:11px;text-align:center;font-size:14px;font-weight:500;cursor:pointer;border-radius:10px;transition:all .2s;color:#6B7280;border:none;background:none;font-family:inherit;outline:none}
+.tab.active{background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;box-shadow:0 2px 6px rgba(99,102,241,.2)}
+.card{background:#fff;border-radius:14px;padding:20px 24px;margin-bottom:16px;border:1px solid #F3F4F6}
+.card h2{font-size:15px;font-weight:600;margin-bottom:16px;color:#374151}
+#reader{width:100%!important;border-radius:12px;overflow:hidden}
+#reader video{border-radius:12px}
+.scan-controls{display:flex;gap:8px;margin-top:12px}
+.btn{padding:10px 20px;border-radius:10px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;border:1.5px solid #E5E7EB;background:#fff;color:#374151;transition:all .2s;outline:none;flex:1;text-align:center}
+.btn:hover{background:#F9FAFB}
+.btn-primary{background:linear-gradient(135deg,#6366F1,#8B5CF6);color:#fff;border:none}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(99,102,241,.25)}
+.btn-danger{color:#EF4444;border-color:#FECACA}
+.btn-danger:hover{background:#FEF2F2;border-color:#EF4444}
+.search-box{display:flex;gap:8px}
+.search-box input{flex:1;padding:11px 14px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:15px;font-family:inherit;outline:none;background:#F9FAFB;transition:all .2s}
+.search-box input:focus{border-color:#6366F1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.result-card{background:#fff;border:1.5px solid #E5E7EB;border-radius:12px;padding:16px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;transition:all .2s}
+.result-card:hover{border-color:#6366F1}
+.result-card .info{flex:1}
+.result-card .info .name{font-size:15px;font-weight:500}
+.result-card .info .detail{font-size:12px;color:#9CA3AF;margin-top:2px}
+.result-card .info .reg-id{font-family:"SF Mono",Consolas,monospace;font-size:11px;color:#C4B5FD;margin-top:1px}
+.checkin-result{padding:20px;text-align:center;border-radius:14px;margin-bottom:16px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.checkin-result.success{background:linear-gradient(135deg,#D1FAE5,#A7F3D0);border:2px solid #6EE7B7}
+.checkin-result.duplicate{background:#FEF3C7;border:2px solid #FCD34D}
+.checkin-result.error{background:#FEE2E2;border:2px solid #FCA5A5}
+.checkin-result .icon{font-size:40px;margin-bottom:8px}
+.checkin-result .title{font-size:17px;font-weight:600;margin-bottom:4px}
+.checkin-result .sub{font-size:13px;color:#6B7280}
+.recent-list{margin-top:6px}
+.recent-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F3F4F6;font-size:14px}
+.recent-item:last-child{border-bottom:none}
+.recent-item .check-name{font-weight:500}
+.recent-item .check-time{font-size:12px;color:#9CA3AF}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;border-radius:10px;padding:12px 16px;border:1px solid #F3F4F6;text-align:center}
+.stat-card .num{font-size:24px;font-weight:600}
+.stat-card .label{font-size:11px;color:#9CA3AF;margin-top:2px}
+.stat-card.scan .num{color:#6366F1}
+.stat-card.manual .num{color:#10B981}
+.manual-results{margin-top:10px;max-height:320px;overflow-y:auto}
+.no-match{text-align:center;padding:20px;color:#9CA3AF;font-size:13px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.success{background:#065F46}
+.toast.error{background:#991B1B}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&#128204; 现场签到</h1>
+  <div class="nav-links">
+    <a href="index.html">报名页</a>
+    <a href="admin.html">管理后台</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="stats-row">
+    <div class="stat-card scan">
+      <div class="num" id="stat-checked">0</div>
+      <div class="label">已签到人数</div>
+    </div>
+    <div class="stat-card manual">
+      <div class="num" id="stat-total">0</div>
+      <div class="label">总报名人数</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-scan" onclick="switchTab('scan')">&#128247; 扫码签到</button>
+    <button class="tab" id="tab-manual" onclick="switchTab('manual')">&#128270; 手动查询</button>
+  </div>
+
+  <div id="scan-tab">
+    <div class="card">
+      <h2>扫描二维码</h2>
+      <div id="reader"></div>
+      <div class="scan-controls">
+        <button class="btn btn-primary" id="start-scan" onclick="startScan()">开始扫码</button>
+        <button class="btn btn-danger" id="stop-scan" onclick="stopScan()" disabled>停止扫码</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="manual-tab" class="hidden">
+    <div class="card">
+      <h2>手动查找签到</h2>
+      <div class="search-box">
+        <input type="text" id="manual-search" placeholder="输入姓名或手机号搜索..." oninput="manualSearch()">
+      </div>
+      <div class="manual-results" id="manual-results">
+        <div class="no-match">请输入关键词搜索</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="checkin-result" class="hidden"></div>
+
+  <div class="card">
+    <h2>最近签到</h2>
+    <div class="recent-list" id="recent-list">
+      <div class="no-match">暂无签到记录</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var html5QrCode = null;
+  var scanning = false;
+  var manualMode = false;
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init(){
+    loadStats();
+    loadRecent();
+  }
+
+  function getRegistrations(){
+    try{ return JSON.parse(localStorage.getItem('meeting_registrations') || '[]'); }catch(e){ return []; }
+  }
+  function saveRegistrations(list){ localStorage.setItem('meeting_registrations', JSON.stringify(list)); }
+
+  window.switchTab = function(tab){
+    manualMode = (tab === 'manual');
+    document.getElementById('tab-scan').classList.toggle('active', !manualMode);
+    document.getElementById('tab-manual').classList.toggle('active', manualMode);
+    document.getElementById('scan-tab').classList.toggle('hidden', manualMode);
+    document.getElementById('manual-tab').classList.toggle('hidden', !manualMode);
+    if(manualMode && scanning) stopScan();
+    if(!manualMode) loadStats();
+  };
+
+  window.startScan = function(){
+    if(scanning) return;
+
+    var el = document.getElementById('reader');
+    el.innerHTML = '';
+
+    html5QrCode = new Html5Qrcode('reader');
+
+    html5QrCode.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1 },
+      function(decodedText){
+        handleCheckin(decodedText.trim(), 'scan');
+      },
+      function(){}
+    ).then(function(){
+      scanning = true;
+      document.getElementById('start-scan').disabled = true;
+      document.getElementById('stop-scan').disabled = false;
+    }).catch(function(err){
+      showToast('摄像头启动失败: ' + (err.message || err), 'error');
+      console.error(err);
+    });
+  };
+
+  window.stopScan = function(){
+    if(!scanning || !html5QrCode) return;
+    html5QrCode.stop().then(function(){
+      scanning = false;
+      html5QrCode = null;
+      document.getElementById('start-scan').disabled = false;
+      document.getElementById('stop-scan').disabled = true;
+    }).catch(function(err){
+      console.error(err);
+    });
+  };
+
+  function handleCheckin(id, source){
+    if(!id) return;
+    var list = getRegistrations();
+    var found = null;
+    for(var i=0; i<list.length; i++){
+      if(list[i].id === id){
+        found = list[i];
+        break;
+      }
+    }
+
+    if(!found){
+      showCheckinResult('error', '未找到报名记录', id, source);
+      return;
+    }
+
+    if(found.checkinStatus === 'checked_in'){
+      var t = found.checkinTime ? fmtTime(found.checkinTime) : '';
+      showCheckinResult('duplicate', found.name, id, source, t);
+      return;
+    }
+
+    found.checkinStatus = 'checked_in';
+    found.checkinTime = new Date().toISOString();
+    saveRegistrations(list);
+
+    showCheckinResult('success', found.name, id, source);
+    loadStats();
+    loadRecent();
+  }
+
+  function showCheckinResult(type, name, id, source, extra){
+    var el = document.getElementById('checkin-result');
+    el.classList.remove('hidden');
+    el.className = 'checkin-result ' + type;
+
+    var icon, title, sub;
+    if(type === 'success'){
+      icon = '&#9989;'; title = name + ' - 签到成功!'; sub = '欢迎光临' + (source==='scan'?' (扫码签到)':' (手动签到)');
+    }else if(type === 'duplicate'){
+      icon = '&#9888;'; title = name + ' - 已签到过'; sub = '首次签到时间: ' + (extra || '未知');
+    }else{
+      icon = '&#10060;'; title = '未找到报名记录'; sub = '编号: ' + id;
+    }
+
+    el.innerHTML = '<div class="icon">'+icon+'</div><div class="title">'+title+'</div><div class="sub">'+sub+'</div>';
+
+    setTimeout(function(){
+      el.classList.add('hidden');
+    }, 4000);
+  }
+
+  window.manualSearch = function(){
+    var q = document.getElementById('manual-search').value.trim();
+    var container = document.getElementById('manual-results');
+
+    if(!q){
+      container.innerHTML = '<div class="no-match">请输入关键词搜索</div>';
+      return;
+    }
+
+    var list = getRegistrations();
+    var ql = q.toLowerCase();
+    var results = list.filter(function(r){
+      return (r.name||'').toLowerCase().includes(ql) ||
+             (r.phone||'').includes(q) ||
+             (r.company||'').toLowerCase().includes(ql);
+    });
+
+    if(results.length === 0){
+      container.innerHTML = '<div class="no-match">未找到匹配的报名记录</div>';
+      return;
+    }
+
+    var html = '';
+    results.forEach(function(r){
+      var isChecked = r.checkinStatus === 'checked_in';
+      var btnText = isChecked ? '已签到' : '签到';
+      var btnClass = isChecked ? 'btn' : 'btn btn-primary';
+      var dis = isChecked ? 'disabled' : '';
+      html += '<div class="result-card">'+
+        '<div class="info">'+
+        '<div class="name">'+esc(r.name)+'</div>'+
+        '<div class="detail">'+esc(r.phone)+' | '+esc(r.company)+'</div>'+
+        '<div class="reg-id">'+esc(r.id)+'</div>'+
+        '</div>'+
+        '<button class="'+btnClass+'" '+dis+' style="flex-shrink:0;margin-left:12px" onclick="window._manualCheckin(\''+r.id+'\')">'+btnText+'</button>'+
+        '</div>';
+    });
+    container.innerHTML = html;
+  };
+
+  window._manualCheckin = function(id){
+    handleCheckin(id, 'manual');
+    document.getElementById('manual-search').value = '';
+    document.getElementById('manual-results').innerHTML = '<div class="no-match">请输入关键词搜索</div>';
+  };
+
+  function loadStats(){
+    var list = getRegistrations();
+    var checked = list.filter(function(r){ return r.checkinStatus === 'checked_in'; }).length;
+    document.getElementById('stat-checked').textContent = checked;
+    document.getElementById('stat-total').textContent = list.length;
+  }
+
+  function loadRecent(){
+    var list = getRegistrations();
+    var checked = list.filter(function(r){ return r.checkinStatus === 'checked_in'; });
+    checked.sort(function(a,b){ return new Date(b.checkinTime) - new Date(a.checkinTime); });
+    checked = checked.slice(0, 10);
+
+    var container = document.getElementById('recent-list');
+    if(checked.length === 0){
+      container.innerHTML = '<div class="no-match">暂无签到记录</div>';
+      return;
+    }
+
+    var html = '';
+    checked.forEach(function(r){
+      html += '<div class="recent-item"><span class="check-name">'+esc(r.name)+'</span><span class="check-time">'+fmtTime(r.checkinTime)+'</span></div>';
+    });
+    container.innerHTML = html;
+  }
+
+  function fmtTime(iso){
+    var d = new Date(iso);
+    var m = d.getMonth()+1;
+    var dd = d.getDate();
+    var h = d.getHours();
+    var mi = d.getMinutes();
+    var s = d.getSeconds();
+    return d.getFullYear()+'-'+(m<10?'0'+m:m)+'-'+(dd<10?'0'+dd:dd)+' '+(h<10?'0'+h:h)+':'+(mi<10?'0'+mi:mi)+':'+(s<10?'0'+s:s);
+  }
+
+  function esc(s){
+    if(!s) return '';
+    var el = document.createElement('div');
+    el.textContent = s;
+    return el.innerHTML;
+  }
+
+  function showToast(msg, type){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + (type||'') + ' show';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+  }
+})();
+</script>
+
+</body>
+</html>
