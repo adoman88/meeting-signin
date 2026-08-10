@@ -116,6 +116,10 @@ table tr:hover{background:#F9FAFB}
         <input type="text" id="cfg-date" placeholder="如：2026-09-19">
       </div>
       <div class="field">
+        <label>具体时间</label>
+        <input type="text" id="cfg-time" placeholder="如：14:00-17:30">
+      </div>
+      <div class="field">
         <label>活动地点</label>
         <input type="text" id="cfg-location" placeholder="如：广州国际会议中心">
       </div>
@@ -242,28 +246,7 @@ table tr:hover{background:#F9FAFB}
 
 <div class="toast" id="toast"></div>
 
-<script>
-// QRCode.js 多源回退加载（jsdelivr 国内常被墙）
-(function loadQRCode(){
-  var sources = [
-    'https://cdn.bootcdn.net/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
-    'https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js',
-    'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
-  ];
-  function tryLoad(i){
-    if(i >= sources.length){
-      console.warn('QRCode.js 所有 CDN 均加载失败，二维码功能不可用');
-      return;
-    }
-    var s = document.createElement('script');
-    s.src = sources[i];
-    s.onload = function(){ console.log('QRCode loaded from: ' + sources[i]); };
-    s.onerror = function(){ tryLoad(i+1); };
-    document.head.appendChild(s);
-  }
-  tryLoad(0);
-})();
-</script>
+<!-- QR 码使用 api.qrserver.com 生成 PNG 图片，无需任何 CDN 库 -->
 <script>
 (function(){
   // ── Cloud Sync Layer (GitHub API) ──
@@ -499,6 +482,7 @@ table tr:hover{background:#F9FAFB}
     var c = getConfig();
     document.getElementById('cfg-name').value = c.eventName || '';
     document.getElementById('cfg-date').value = c.eventDate || '';
+    document.getElementById('cfg-time').value = c.eventTime || '';
     document.getElementById('cfg-location').value = c.eventLocation || '';
     loadBannerPreview(c);
     loadWechatPreview(c);
@@ -624,6 +608,7 @@ table tr:hover{background:#F9FAFB}
       var config = {
         eventName: document.getElementById('cfg-name').value.trim(),
         eventDate: document.getElementById('cfg-date').value.trim(),
+        eventTime: document.getElementById('cfg-time').value.trim(),
         eventLocation: document.getElementById('cfg-location').value.trim(),
         entryUrl: document.getElementById('entry-url-override').value.trim(),
         bannerImage: existing.bannerImage || '',
@@ -913,33 +898,16 @@ table tr:hover{background:#F9FAFB}
 
   function renderQR(container, url, color){
     container.innerHTML = '';
-    function doRender(retries){
-      if(typeof QRCode === 'undefined'){
-        if(retries > 0){
-          container.innerHTML = '<div style="width:200px;height:200px;background:#FEFCE8;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#D97706;font-size:12px;text-align:center;line-height:1.6">正在加载二维码库...<br/>请稍候</div>';
-          setTimeout(function(){ doRender(retries - 1); }, 800);
-          return;
-        }
-        container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center;line-height:1.6">QR库加载失败<br/><small style="color:#9CA3AF">可能是网络问题<br/>请刷新页面重试</small></div>';
-        return;
-      }
-      try {
-        container.innerHTML = ''; // 清理占位文字
-        var div = document.createElement('div');
-        container.appendChild(div);
-        new QRCode(div, {
-          text: url,
-          width: 200,
-          height: 200,
-          colorDark: color,
-          colorLight: '#ffffff',
-          correctLevel: QRCode.CorrectLevel.H
-        });
-      } catch(e){
-        container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center">生成失败<br/>请刷新重试</div>';
-      }
-    }
-    doRender(20); // 最多等待 20*800ms = 16 秒
+    var img = document.createElement('img');
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=' + encodeURIComponent(color.replace('#','')) + '&data=' + encodeURIComponent(url);
+    img.width = 200;
+    img.height = 200;
+    img.style.display = 'block';
+    img.style.borderRadius = '8px';
+    img.onerror = function(){
+      container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center;line-height:1.6">生成失败<br/><small style="color:#9CA3AF">请检查网络后刷新重试</small></div>';
+    };
+    container.appendChild(img);
   }
 
   function bindEntryQR(){
@@ -955,37 +923,25 @@ table tr:hover{background:#F9FAFB}
   }
 
   function downloadQR(containerId, title){
-    var canvas = document.querySelector('#'+containerId+' canvas');
     var img = document.querySelector('#'+containerId+' img');
-    var dataUrl;
-
-    if(canvas){
-      try{ dataUrl = canvas.toDataURL('image/png'); }catch(e){}
-    }
-    if(!dataUrl && img){
-      var c = document.createElement('canvas');
-      c.width = img.naturalWidth || img.width || 200;
-      c.height = img.naturalHeight || img.height || 200;
-      c.getContext('2d').drawImage(img, 0, 0);
-      try{ dataUrl = c.toDataURL('image/png'); }catch(e){}
-    }
-    if(!dataUrl || dataUrl.length < 100){
-      showToast('二维码渲染未完成，请稍后','error');
+    if(!img || !img.src || img.src === ''){
+      showToast('二维码尚未生成', 'error');
       return;
     }
+    var src = img.src;
 
     var w = window.open('');
     if(w){
       w.document.title = title;
       w.document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5';
-      w.document.body.innerHTML = '<div style="text-align:center;padding:24px"><img src="'+dataUrl+'" style="max-width:100%;height:auto;border:1px solid #e0e0e0;border-radius:8px" /><p style="margin-top:16px;color:#666;font-size:14px">长按图片保存 / 右键另存为</p></div>';
+      w.document.body.innerHTML = '<div style="text-align:center;padding:24px"><img src="'+src+'" style="max-width:300px;height:auto;border:1px solid #e0e0e0;border-radius:8px" /><p style="margin-top:16px;color:#666;font-size:14px">长按图片保存 / 右键另存为</p></div>';
       showToast('二维码已在新窗口打开','success');
       return;
     }
 
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px;text-align:center;max-width:90%"><h3 style="margin:0 0 16px;color:#1F2937">'+title+'</h3><img src="'+dataUrl+'" style="max-width:100%;height:auto;border-radius:8px" /><p style="margin:16px 0 0;color:#6B7280;font-size:13px">长按图片保存 / 右键另存为</p><button style="margin-top:16px;padding:10px 32px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">关闭</button></div>';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px;text-align:center;max-width:90%"><h3 style="margin:0 0 16px;color:#1F2937">'+title+'</h3><img src="'+src+'" style="max-width:100%;height:auto;border-radius:8px" /><p style="margin:16px 0 0;color:#6B7280;font-size:13px">长按图片保存 / 右键另存为</p><button style="margin-top:16px;padding:10px 32px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">关闭</button></div>';
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function(e){
       if(e.target === overlay) document.body.removeChild(overlay);
