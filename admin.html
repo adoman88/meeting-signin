@@ -13,6 +13,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .header .nav-links{display:flex;gap:8px}
 .header .nav-links a{font-size:12px;color:#6B7280;text-decoration:none;padding:6px 12px;border-radius:8px;border:1px solid #E5E7EB;transition:all .2s}
 .header .nav-links a:hover{color:#6366F1;border-color:#6366F1;background:#F5F3FF}
+.header .voice-indicator{display:flex;align-items:center;gap:6px;font-size:11px;color:#10B981;margin-left:12px;display:none}
+.header .voice-indicator.active{display:flex}
+.header .voice-indicator .dot{width:8px;height:8px;background:#10B981;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .container{max-width:960px;width:100%;margin:0 auto;padding:20px 16px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
 .stat-card{background:#fff;border-radius:12px;padding:16px 20px;border:1px solid #F3F4F6}
@@ -27,16 +31,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .config-grid label{display:block;font-size:12px;font-weight:500;color:#6B7280;margin-bottom:4px}
 .config-grid input{width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:#F9FAFB;transition:all .2s}
 .config-grid input:focus{border-color:#6366F1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
-.banner-upload-field{margin-top:12px}
-.banner-upload-field .label-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.banner-preview{width:100%;max-width:375px;aspect-ratio:750/350;background:#F3F4F6;border-radius:8px;overflow:hidden;position:relative;cursor:pointer;border:1.5px dashed #E5E7EB;transition:all .2s}
-.banner-preview:hover{border-color:#6366F1}
-.banner-preview img{width:100%;height:100%;object-fit:cover}
-.banner-preview .preview-placeholder{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:13px}
-.banner-preview.has-image{border-style:solid}
-.banner-preview.has-image .preview-placeholder{display:none}
-.banner-remove{font-size:11px;color:#EF4444;cursor:pointer;display:none}
-.banner-remove.visible{display:inline}
+.upload-field{margin-top:14px}
+.upload-field .label-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.upload-preview{width:100%;max-width:200px;aspect-ratio:1;background:#F3F4F6;border-radius:8px;overflow:hidden;position:relative;cursor:pointer;border:1.5px dashed #E5E7EB;transition:all .2s}
+.upload-preview:hover{border-color:#6366F1}
+.upload-preview img{width:100%;height:100%;object-fit:cover}
+.upload-preview .preview-placeholder{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:12px;text-align:center}
+.upload-preview.has-image{border-style:solid}
+.upload-preview.has-image .preview-placeholder{display:none}
+.upload-remove{font-size:11px;color:#EF4444;cursor:pointer;display:none}
+.upload-remove.visible{display:inline}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
 .toolbar input[type=text]{flex:1;min-width:160px;padding:9px 14px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#F9FAFB;transition:all .2s}
 .toolbar input[type=text]:focus{border-color:#6366F1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
@@ -64,6 +68,11 @@ table tr:hover{background:#F9FAFB}
 .toast.error{background:#991B1B}
 .count-info{font-size:12px;color:#9CA3AF;margin-top:6px}
 .hidden-input{display:none}
+.voice-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;margin-bottom:16px}
+.voice-bar .voice-status{font-size:13px;color:#065F46;flex:1}
+.voice-bar .voice-last{font-size:11px;color:#6B7280}
+.voice-bar .btn-voice{padding:6px 14px;font-size:12px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
 @media(max-width:640px){
   table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .toolbar{flex-direction:column;align-items:stretch}
@@ -73,7 +82,10 @@ table tr:hover{background:#F9FAFB}
 <body>
 
 <div class="header">
-  <h1>&#9881; 管理后台</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <h1>&#9881; 管理后台</h1>
+    <span class="voice-indicator" id="voice-indicator"><span class="dot"></span>语音播报中</span>
+  </div>
   <div class="nav-links">
     <a href="index.html">报名页</a>
     <a href="checkin.html">签到页</a>
@@ -81,8 +93,17 @@ table tr:hover{background:#F9FAFB}
 </div>
 
 <div class="container">
+  <!-- Voice announcement bar -->
+  <div class="voice-bar" id="voice-bar">
+    <span class="voice-status" id="voice-status">&#128264; 语音播报：已开启</span>
+    <span class="voice-last" id="voice-last"></span>
+    <button class="btn btn-voice" id="btn-voice-toggle" onclick="toggleVoice()">关闭播报</button>
+    <button class="btn btn-voice" id="btn-voice-test" onclick="testVoice()">测试播报</button>
+  </div>
+
   <div class="stats" id="stats"></div>
 
+  <!-- Config Card -->
   <div class="card">
     <h2>活动配置</h2>
     <div class="config-grid">
@@ -99,24 +120,28 @@ table tr:hover{background:#F9FAFB}
         <input type="text" id="cfg-location" placeholder="如：广州国际会议中心">
       </div>
     </div>
-    <div class="banner-upload-field">
+
+    <!-- WeChat QR Code Upload -->
+    <div class="upload-field">
       <div class="label-row">
-        <label style="font-size:12px;font-weight:500;color:#6B7280">报名页封面图（750×350，选填）</label>
-        <span class="banner-remove" id="cfg-banner-remove">移除图片</span>
+        <label style="font-size:12px;font-weight:500;color:#6B7280">微信客服二维码（报名成功后展示，引导加客服）</label>
+        <span class="upload-remove" id="cfg-wechat-remove">移除</span>
       </div>
-      <div class="banner-preview" id="cfg-banner-preview" onclick="document.getElementById('cfg-banner-file').click()">
-        <img id="cfg-banner-img" src="" alt="" style="display:none">
-        <span class="preview-placeholder">点击上传封面图</span>
+      <div class="upload-preview" id="cfg-wechat-preview" onclick="document.getElementById('cfg-wechat-file').click()">
+        <img id="cfg-wechat-img" src="" alt="" style="display:none">
+        <span class="preview-placeholder">点击上传<br>微信客服二维码</span>
       </div>
-      <input type="file" id="cfg-banner-file" accept="image/*" style="display:none">
+      <input type="file" id="cfg-wechat-file" accept="image/*" style="display:none">
     </div>
+
     <div style="margin-top:14px">
       <button class="btn btn-primary" id="save-config">保存配置</button>
-      <button class="btn btn-outline" id="download-config-json" style="margin-top:8px">下载配置文件 (config.json)</button>
-      <p style="font-size:11px;color:#9CA3AF;margin-top:6px">下载后告知大跳，自动推送到云端 → 客户扫码即可看到封面图和活动信息</p>
+      <button class="btn" id="download-config-json" style="margin-left:6px">下载配置文件</button>
+      <p style="font-size:11px;color:#9CA3AF;margin-top:6px">保存后自动同步云端，报名页和签到页均可读取</p>
     </div>
   </div>
 
+  <!-- Entry QR Card -->
   <div class="card">
     <h2>报名入口二维码</h2>
     <p style="font-size:13px;color:#6B7280;margin-bottom:16px">将此二维码印在海报、邀请函或朋友圈传播，客户微信扫码直达报名页 <span id="entry-qr-event-label" style="color:#6366F1;font-weight:500"></span></p>
@@ -124,29 +149,56 @@ table tr:hover{background:#F9FAFB}
       <label style="display:block;font-size:12px;font-weight:500;color:#6B7280;margin-bottom:4px">报名页地址（可手动修改）</label>
       <div style="display:flex;gap:8px">
         <input type="text" id="entry-url-override" placeholder="留空则自动使用当前域名" style="flex:1;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:monospace;outline:none;background:#F9FAFB">
-        <button class="btn" id="refresh-entry-qr">刷新二维码</button>
+        <button class="btn" id="refresh-entry-qr">刷新</button>
       </div>
     </div>
     <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
       <div style="text-align:center;flex-shrink:0">
         <div id="entry-qr-canvas" style="display:inline-block;padding:16px;background:#fff;border:2px dashed #E5E7EB;border-radius:12px">
-          <div style="width:200px;height:200px;background:#F9FAFB;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#D1D5DB;font-size:13px" id="entry-qr-placeholder">二维码加载中...</div>
+          <div style="width:200px;height:200px;background:#F9FAFB;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#D1D5DB;font-size:13px" id="entry-qr-placeholder">加载中...</div>
         </div>
         <div style="font-size:12px;color:#6366F1;margin-top:8px;background:#EEF2FF;padding:6px 10px;border-radius:6px;word-break:break-all;font-family:monospace;max-width:240px" id="entry-url-display"></div>
       </div>
       <div>
-        <div style="margin-bottom:8px">
-          <button class="btn btn-primary" id="download-entry-qr">查看 / 保存二维码</button>
-        </div>
-        <div style="font-size:12px;color:#9CA3AF;line-height:1.8">
-          <div>&#128161; 点击下方按钮查看大图并保存</div>
-          <div>&#128161; 将二维码放入活动海报 / 邀请函</div>
+        <button class="btn btn-primary" id="download-entry-qr">查看 / 保存报名二维码</button>
+        <div style="font-size:12px;color:#9CA3AF;line-height:1.8;margin-top:8px">
+          <div>&#128161; 将二维码放入活动海报/邀请函</div>
           <div>&#128161; 客户用微信扫码即可报名</div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Check-in QR Card (NEW) -->
+  <div class="card" style="border-color:#D1FAE5;background:#F0FDF4">
+    <h2 style="color:#065F46">&#127984; 签到处签到二维码</h2>
+    <p style="font-size:13px;color:#047857;margin-bottom:16px">将此二维码打印放置签到处，客户到场扫码输入手机号即可自助签到</p>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;font-weight:500;color:#6B7280;margin-bottom:4px">签到页地址（可手动修改）</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="checkin-url-override" placeholder="留空则自动使用当前域名" style="flex:1;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:monospace;outline:none;background:#F9FAFB">
+        <button class="btn" id="refresh-checkin-qr">刷新</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+      <div style="text-align:center;flex-shrink:0">
+        <div id="checkin-qr-canvas" style="display:inline-block;padding:16px;background:#fff;border:2px dashed #10B981;border-radius:12px">
+          <div style="width:200px;height:200px;background:#F9FAFB;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#D1D5DB;font-size:13px" id="checkin-qr-placeholder">加载中...</div>
+        </div>
+        <div style="font-size:12px;color:#059669;margin-top:8px;background:#D1FAE5;padding:6px 10px;border-radius:6px;word-break:break-all;font-family:monospace;max-width:240px" id="checkin-url-display"></div>
+      </div>
+      <div>
+        <button class="btn btn-success" id="download-checkin-qr">查看 / 保存签到二维码</button>
+        <div style="font-size:12px;color:#9CA3AF;line-height:1.8;margin-top:8px">
+          <div>&#128161; 打印后放置于签到处桌面</div>
+          <div>&#128161; 客户扫码 → 输入手机号 → 自动签到</div>
+          <div>&#128161; 签到后语音自动播报提醒</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registration List -->
   <div class="card">
     <h2>报名列表</h2>
     <div class="toolbar">
@@ -162,6 +214,7 @@ table tr:hover{background:#F9FAFB}
     <div class="count-info" id="count-info"></div>
   </div>
 
+  <!-- Data Ops -->
   <div class="card">
     <h2>数据操作</h2>
     <div class="actions">
@@ -178,7 +231,7 @@ table tr:hover{background:#F9FAFB}
 
 <script>
 /*! QRCode.js 1.0.0 | (c) 2012 davidshimjs | MIT */
-var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this.parsedData=[];for(var b=[],d=0,e=this.data.length;e>d;d++){var f=this.data.charCodeAt(d);f>65536?(b[0]=240|(1835008&f)>>>18,b[1]=128|(258048&f)>>>12,b[2]=128|(4032&f)>>>6,b[3]=128|63&f):f>2048?(b[0]=224|(61440&f)>>>12,b[1]=128|(4032&f)>>>6,b[2]=128|63&f):f>128?(b[0]=192|(1984&f)>>>6,b[1]=128|63&f):b[0]=f,this.parsedData=this.parsedData.concat(b)}this.parsedData.length!=this.data.length&&(this.parsedData.unshift(191),this.parsedData.unshift(187),this.parsedData.unshift(239))}function b(a,b){this.typeNumber=a,this.errorCorrectLevel=b,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function i(a,b){if(void 0==a.length)throw new Error(a.length+"/"+b);for(var c=0;c<a.length&&0==a[c];)c++;this.num=new Array(a.length-c+b);for(var d=0;d<a.length-c;d++)this.num[d]=a[d+c]}function j(a,b){this.totalCount=a,this.dataCount=b}function k(){this.buffer=[],this.length=0}function m(){return"undefined"!=typeof CanvasRenderingContext2D}function n(){var a=!1,b=navigator.userAgent;return/android/i.test(b)&&(a=!0,aMat=b.toString().match(/android ([0-9]\.[0-9])/i),aMat&&aMat[1]&&(a=parseFloat(aMat[1]))),a}function r(a,b){for(var c=1,e=s(a),f=0,g=l.length;g>=f;f++){var h=0;switch(b){case d.L:h=l[f][0];break;case d.M:h=l[f][1];break;case d.Q:h=l[f][2];break;case d.H:h=l[f][3]}if(h>=e)break;c++}if(c>l.length)throw new Error("Too long data");return c}function s(a){var b=encodeURI(a).toString().replace(/\%[0-9a-fA-F]{2}/g,"a");return b.length+(b.length!=a?3:0)}a.prototype={getLength:function(){return this.parsedData.length},write:function(a){for(var b=0,c=this.parsedData.length;c>b;b++)a.put(this.parsedData[b],8)}},b.prototype={addData:function(b){var c=new a(b);this.dataList.push(c),this.dataCache=null},isDark:function(a,b){if(0>a||this.moduleCount<=a||0>b||this.moduleCount<=b)throw new Error(a+","+b);return this.modules[a][b]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(a,c){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var d=0;d<this.moduleCount;d++){this.modules[d]=new Array(this.moduleCount);for(var e=0;e<this.moduleCount;e++)this.modules[d][e]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(a,c),this.typeNumber>=7&&this.setupTypeNumber(a),null==this.dataCache&&(this.dataCache=b.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,c)},setupPositionProbePattern:function(a,b){for(var c=-1;7>=c;c++)if(!(-1>=a+c||this.moduleCount<=a+c))for(var d=-1;7>=d;d++)-1>=b+d||this.moduleCount<=b+d||(this.modules[a+c][b+d]=c>=0&&6>=c&&(0==d||6==d)||d>=0&&6>=d&&(0==c||6==c)||c>=2&&4>=c&&d>=2&&4>=d?!0:!1)},getBestMaskPattern:function(){for(var a=0,b=0,c=0;8>c;c++){this.makeImpl(!0,c);var d=f.getLostPoint(this);(0==c||a>d)&&(a=d,b=c)}return b},createMovieClip:function(a,b,c){var d=a.createEmptyMovieClip(b,c),e=1;this.make();for(var f=0;f<this.modules.length;f++)for(var g=f*e,h=0;h<this.modules[f].length;h++){var i=h*e,j=this.modules[f][h];j&&(d.beginFill(0,100),d.moveTo(i,g),d.lineTo(i+e,g),d.lineTo(i+e,g+e),d.lineTo(i,g+e),d.endFill())}return d},setupTimingPattern:function(){for(var a=8;a<this.moduleCount-8;a++)null==this.modules[a][6]&&(this.modules[a][6]=0==a%2);for(var b=8;b<this.moduleCount-8;b++)null==this.modules[6][b]&&(this.modules[6][b]=0==b%2)},setupPositionAdjustPattern:function(){for(var a=f.getPatternPosition(this.typeNumber),b=0;b<a.length;b++)for(var c=0;c<a.length;c++){var d=a[b],e=a[c];if(null==this.modules[d][e])for(var g=-2;2>=g;g++)for(var h=-2;2>=h;h++)this.modules[d+g][e+h]=-2==g||2==g||-2==h||2==h||0==g&&0==h?!0:!1}},setupTypeNumber:function(a){for(var b=f.getBCHTypeNumber(this.typeNumber),c=0;18>c;c++){var d=!a&&1==(1&b>>c);this.modules[Math.floor(c/3)][c%3+this.moduleCount-8-3]=d}for(var c=0;18>c;c++){var d=!a&&1==(1&b>>c);this.modules[c%3+this.moduleCount-8-3][Math.floor(c/3)]=d}},setupTypeInfo:function(a,b){for(var c=this.errorCorrectLevel<<3|b,d=f.getBCHTypeInfo(c),e=0;15>e;e++){var g=!a&&1==(1&d>>e);6>e?this.modules[e][8]=g:8>e?this.modules[e+1][8]=g:this.modules[this.moduleCount-15+e][8]=g}for(var e=0;15>e;e++){var g=!a&&1==(1&d>>e);8>e?this.modules[8][this.moduleCount-e-1]=g:9>e?this.modules[8][15-e-1+1]=g:this.modules[8][15-e-1]=g}this.modules[this.moduleCount-8][8]=!a},mapData:function(a,b){for(var c=-1,d=this.moduleCount-1,e=7,g=0,h=this.moduleCount-1;h>0;h-=2)for(6==h&&h--;;){for(var i=0;2>i;i++)if(null==this.modules[d][h-i]){var j=!1;g<a.length&&(j=1==(1&a[g]>>>e));var k=f.getMask(b,d,h-i);k&&(j=!j),this.modules[d][h-i]=j,e--,-1==e&&(g++,e=7)}if(d+=c,0>d||this.moduleCount<=d){d-=c,c=-c;break}}}},b.PAD0=236,b.PAD1=17,b.createData=function(a,c,d){for(var e=j.getRSBlocks(a,c),g=new k,h=0;h<d.length;h++){var i=d[h];g.put(i.mode,4),g.put(i.getLength(),f.getLengthInBits(i.mode,a)),i.write(g)}for(var l=0,h=0;h<e.length;h++)l+=e[h].dataCount;if(g.getLengthInBits()>8*l)throw new Error("code length overflow");for(g.getLengthInBits()+4<=8*l&&g.put(0,4);0!=g.getLengthInBits()%8;)g.putBit(!1);for(;;){if(g.getLengthInBits()>=8*l)break;if(g.put(b.PAD0,8),g.getLengthInBits()>=8*l)break;g.put(b.PAD1,8)}return b.createBytes(g,e)},b.createBytes=function(a,b){for(var c=0,d=0,e=0,g=new Array(b.length),h=new Array(b.length),j=0;j<b.length;j++){var k=b[j].dataCount,l=b[j].totalCount-k;d=Math.max(d,k),e=Math.max(e,l),g[j]=new Array(k);for(var m=0;m<g[j].length;m++)g[j][m]=255&a.buffer[m+c];c+=k;var n=f.getErrorCorrectPolynomial(l),o=new i(g[j],n.getLength()-1),p=o.mod(n);h[j]=new Array(n.getLength()-1);for(var m=0;m<h[j].length;m++){var q=m+p.getLength()-h[j].length;h[j][m]=q>=0?p.get(q):0}}for(var r=0,m=0;m<b.length;m++)r+=b[m].totalCount;for(var s=new Array(r),t=0,m=0;d>m;m++)for(var j=0;j<b.length;j++)m<g[j].length&&(s[t++]=g[j][m]);for(var m=0;e>m;m++)for(var j=0;j<b.length;j++)m<h[j].length&&(s[t++]=h[j][m]);return s};for(var c={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},d={L:1,M:0,Q:3,H:2},e={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7},f={PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(a){for(var b=a<<10;f.getBCHDigit(b)-f.getBCHDigit(f.G15)>=0;)b^=f.G15<<f.getBCHDigit(b)-f.getBCHDigit(f.G15);return(a<<10|b)^f.G15_MASK},getBCHTypeNumber:function(a){for(var b=a<<12;f.getBCHDigit(b)-f.getBCHDigit(f.G18)>=0;)b^=f.G18<<f.getBCHDigit(b)-f.getBCHDigit(f.G18);return a<<12|b},getBCHDigit:function(a){for(var b=0;0!=a;)b++,a>>>=1;return b},getPatternPosition:function(a){return f.PATTERN_POSITION_TABLE[a-1]},getMask:function(a,b,c){switch(a){case e.PATTERN000:return 0==(b+c)%2;case e.PATTERN001:return 0==b%2;case e.PATTERN010:return 0==c%3;case e.PATTERN011:return 0==(b+c)%3;case e.PATTERN100:return 0==(Math.floor(b/2)+Math.floor(c/3))%2;case e.PATTERN101:return 0==b*c%2+b*c%3;case e.PATTERN110:return 0==(b*c%2+b*c%3)%2;case e.PATTERN111:return 0==(b*c%3+(b+c)%2)%2;default:throw new Error("bad maskPattern:"+a)}},getErrorCorrectPolynomial:function(a){for(var b=new i([1],0),c=0;a>c;c++)b=b.multiply(new i([1,g.gexp(c)],0));return b},getLengthInBits:function(a,b){if(b>=1&&10>b)switch(a){case c.MODE_NUMBER:return 10;case c.MODE_ALPHA_NUM:return 9;case c.MODE_8BIT_BYTE:return 8;case c.MODE_KANJI:return 8;default:throw new Error("mode:"+a)}else if(27>b)switch(a){case c.MODE_NUMBER:return 12;case c.MODE_ALPHA_NUM:return 11;case c.MODE_8BIT_BYTE:return 16;case c.MODE_KANJI:return 10;default:throw new Error("mode:"+a)}else{if(!(41>b))throw new Error("type:"+b);switch(a){case c.MODE_NUMBER:return 14;case c.MODE_ALPHA_NUM:return 13;case c.MODE_8BIT_BYTE:return 16;case c.MODE_KANJI:return 12;default:throw new Error("mode:"+a)}}},getLostPoint:function(a){for(var b=a.getModuleCount(),c=0,d=0;b>d;d++)for(var e=0;b>e;e++){for(var f=0,g=a.isDark(d,e),h=-1;1>=h;h++)if(!(0>d+h||d+h>=b))for(var i=-1;1>=i;i++)0>e+i||e+i>=b||(0!=h||0!=i)&&g==a.isDark(d+h,e+i)&&f++;f>5&&(c+=3+f-5)}for(var d=0;b-1>d;d++)for(var e=0;b-1>e;e++){var j=0;a.isDark(d,e)&&j++,a.isDark(d+1,e)&&j++,a.isDark(d,e+1)&&j++,a.isDark(d+1,e+1)&&j++,(0==j||4==j)&&(c+=3)}for(var d=0;b>d;d++)for(var e=0;b-6>e;e++)a.isDark(d,e)&&!a.isDark(d,e+1)&&a.isDark(d,e+2)&&a.isDark(d,e+3)&&a.isDark(d,e+4)&&!a.isDark(d,e+5)&&a.isDark(d,e+6)&&(c+=40);for(var e=0;b>e;e++)for(var d=0;b-6>d;d++)a.isDark(d,e)&&!a.isDark(d+1,e)&&a.isDark(d+2,e)&&a.isDark(d+3,e)&&a.isDark(d+4,e)&&!a.isDark(d+5,e)&&a.isDark(d+6,e)&&(c+=40);for(var k=0,e=0;b>e;e++)for(var d=0;b>d;d++)a.isDark(d,e)&&k++;var l=Math.abs(100*k/b/b-50)/5;return c+=10*l}},g={glog:function(a){if(1>a)throw new Error("glog("+a+")");return g.LOG_TABLE[a]},gexp:function(a){for(;0>a;)a+=255;for(;a>=256;)a-=255;return g.EXP_TABLE[a]},EXP_TABLE:new Array(256),LOG_TABLE:new Array(256)},h=0;8>h;h++)g.EXP_TABLE[h]=1<<h;for(var h=8;256>h;h++)g.EXP_TABLE[h]=g.EXP_TABLE[h-4]^g.EXP_TABLE[h-5]^g.EXP_TABLE[h-6]^g.EXP_TABLE[h-8];for(var h=0;255>h;h++)g.LOG_TABLE[g.EXP_TABLE[h]]=h;i.prototype={get:function(a){return this.num[a]},getLength:function(){return this.num.length},multiply:function(a){for(var b=new Array(this.getLength()+a.getLength()-1),c=0;c<this.getLength();c++)for(var d=0;d<a.getLength();d++)b[c+d]^=g.gexp(g.glog(this.get(c))+g.glog(a.get(d)));return new i(b,0)},mod:function(a){if(this.getLength()-a.getLength()<0)return this;for(var b=g.glog(this.get(0))-g.glog(a.get(0)),c=new Array(this.getLength()),d=0;d<this.getLength();d++)c[d]=this.get(d);for(var d=0;d<a.getLength();d++)c[d]^=g.gexp(g.glog(a.get(d))+b);return new i(c,0).mod(a)}},j.RS_BLOCK_TABLE=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],j.getRSBlocks=function(a,b){var c=j.getRsBlockTable(a,b);if(void 0==c)throw new Error("bad rs block @ typeNumber:"+a+"/errorCorrectLevel:"+b);for(var d=c.length/3,e=[],f=0;d>f;f++)for(var g=c[3*f+0],h=c[3*f+1],i=c[3*f+2],k=0;g>k;k++)e.push(new j(h,i));return e},j.getRsBlockTable=function(a,b){switch(b){case d.L:return j.RS_BLOCK_TABLE[4*(a-1)+0];case d.M:return j.RS_BLOCK_TABLE[4*(a-1)+1];case d.Q:return j.RS_BLOCK_TABLE[4*(a-1)+2];case d.H:return j.RS_BLOCK_TABLE[4*(a-1)+3];default:return void 0}},k.prototype={get:function(a){var b=Math.floor(a/8);return 1==(1&this.buffer[b]>>>7-a%8)},put:function(a,b){for(var c=0;b>c;c++)this.putBit(1==(1&a>>>b-c-1))},getLengthInBits:function(){return this.length},putBit:function(a){var b=Math.floor(this.length/8);this.buffer.length<=b&&this.buffer.push(0),a&&(this.buffer[b]|=128>>>this.length%8),this.length++}};var l=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],[134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],[321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,292,220],[586,450,322,250],[644,504,364,280],[718,560,394,310],[792,624,442,338],[858,666,482,382],[929,711,509,403],[1003,779,565,439],[1091,857,611,461],[1171,911,661,511],[1273,997,715,535],[1367,1059,751,593],[1465,1125,805,625],[1528,1190,868,658],[1628,1264,908,698],[1732,1370,982,742],[1840,1452,1030,790],[1952,1538,1112,842],[2068,1628,1168,898],[2188,1722,1228,958],[2303,1809,1283,983],[2431,1911,1351,1051],[2563,1989,1423,1093],[2699,2099,1499,1139],[2809,2213,1579,1219],[2953,2331,1663,1273]],o=function(){var a=function(a,b){this._el=a,this._htOption=b};return a.prototype.draw=function(a){function g(a,b){var c=document.createElementNS("http://www.w3.org/2000/svg",a);for(var d in b)b.hasOwnProperty(d)&&c.setAttribute(d,b[d]);return c}var b=this._htOption,c=this._el,d=a.getModuleCount();Math.floor(b.width/d),Math.floor(b.height/d),this.clear();var h=g("svg",{viewBox:"0 0 "+String(d)+" "+String(d),width:"100%",height:"100%",fill:b.colorLight});h.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:xlink","http://www.w3.org/1999/xlink"),c.appendChild(h),h.appendChild(g("rect",{fill:b.colorDark,width:"1",height:"1",id:"template"}));for(var i=0;d>i;i++)for(var j=0;d>j;j++)if(a.isDark(i,j)){var k=g("use",{x:String(i),y:String(j)});k.setAttributeNS("http://www.w3.org/1999/xlink","href","#template"),h.appendChild(k)}},a.prototype.clear=function(){for(;this._el.hasChildNodes();)this._el.removeChild(this._el.lastChild)},a}(),p="svg"===document.documentElement.tagName.toLowerCase(),q=p?o:m()?function(){function a(){this._elImage.src=this._elCanvas.toDataURL("image/png"),this._elImage.style.display="block",this._elCanvas.style.display="none"}function d(a,b){var c=this;if(c._fFail=b,c._fSuccess=a,null===c._bSupportDataURI){var d=document.createElement("img"),e=function(){c._bSupportDataURI=!1,c._fFail&&_fFail.call(c)},f=function(){c._bSupportDataURI=!0,c._fSuccess&&c._fSuccess.call(c)};return d.onabort=e,d.onerror=e,d.onload=f,d.src="data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",void 0}c._bSupportDataURI===!0&&c._fSuccess?c._fSuccess.call(c):c._bSupportDataURI===!1&&c._fFail&&c._fFail.call(c)}if(this._android&&this._android<=2.1){var b=1/window.devicePixelRatio,c=CanvasRenderingContext2D.prototype.drawImage;CanvasRenderingContext2D.prototype.drawImage=function(a,d,e,f,g,h,i,j){if("nodeName"in a&&/img/i.test(a.nodeName))for(var l=arguments.length-1;l>=1;l--)arguments[l]=arguments[l]*b;else"undefined"==typeof j&&(arguments[1]*=b,arguments[2]*=b,arguments[3]*=b,arguments[4]*=b);c.apply(this,arguments)}}var e=function(a,b){this._bIsPainted=!1,this._android=n(),this._htOption=b,this._elCanvas=document.createElement("canvas"),this._elCanvas.width=b.width,this._elCanvas.height=b.height,a.appendChild(this._elCanvas),this._el=a,this._oContext=this._elCanvas.getContext("2d"),this._bIsPainted=!1,this._elImage=document.createElement("img"),this._elImage.style.display="none",this._el.appendChild(this._elImage),this._bSupportDataURI=null};return e.prototype.draw=function(a){var b=this._elImage,c=this._oContext,d=this._htOption,e=a.getModuleCount(),f=d.width/e,g=d.height/e,h=Math.round(f),i=Math.round(g);b.style.display="none",this.clear();for(var j=0;e>j;j++)for(var k=0;e>k;k++){var l=a.isDark(j,k),m=k*f,n=j*g;c.strokeStyle=l?d.colorDark:d.colorLight,c.lineWidth=1,c.fillStyle=l?d.colorDark:d.colorLight,c.fillRect(m,n,f,g),c.strokeRect(Math.floor(m)+.5,Math.floor(n)+.5,h,i),c.strokeRect(Math.ceil(m)-.5,Math.ceil(n)-.5,h,i)}this._bIsPainted=!0},e.prototype.makeImage=function(){this._bIsPainted&&d.call(this,a)},e.prototype.isPainted=function(){return this._bIsPainted},e.prototype.clear=function(){this._oContext.clearRect(0,0,this._elCanvas.width,this._elCanvas.height),this._bIsPainted=!1},e.prototype.round=function(a){return a?Math.floor(1e3*a)/1e3:a},e}():function(){var a=function(a,b){this._el=a,this._htOption=b};return a.prototype.draw=function(a){for(var b=this._htOption,c=this._el,d=a.getModuleCount(),e=Math.floor(b.width/d),f=Math.floor(b.height/d),g=['<table style="border:0;border-collapse:collapse;">'],h=0;d>h;h++){g.push("<tr>");for(var i=0;d>i;i++)g.push('<td style="border:0;border-collapse:collapse;padding:0;margin:0;width:'+e+"px;height:"+f+"px;background-color:"+(a.isDark(h,i)?b.colorDark:b.colorLight)+';"></td>');g.push("</tr>")}g.push("</table>"),c.innerHTML=g.join("");var j=c.childNodes[0],k=(b.width-j.offsetWidth)/2,l=(b.height-j.offsetHeight)/2;k>0&&l>0&&(j.style.margin=l+"px "+k+"px")},a.prototype.clear=function(){this._el.innerHTML=""},a}();QRCode=function(a,b){if(this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:d.H},"string"==typeof b&&(b={text:b}),b)for(var c in b)this._htOption[c]=b[c];"string"==typeof a&&(a=document.getElementById(a)),this._android=n(),this._el=a,this._oQRCode=null,this._oDrawing=new q(this._el,this._htOption),this._htOption.text&&this.makeCode(this._htOption.text)},QRCode.prototype.makeCode=function(a){this._oQRCode=new b(r(a,this._htOption.correctLevel),this._htOption.correctLevel),this._oQRCode.addData(a),this._oQRCode.make(),this._el.title=a,this._oDrawing.draw(this._oQRCode),this.makeImage()},QRCode.prototype.makeImage=function(){"function"==typeof this._oDrawing.makeImage&&(!this._android||this._android>=3)&&this._oDrawing.makeImage()},QRCode.prototype.clear=function(){this._oDrawing.clear()},QRCode.CorrectLevel=d}();
+var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this.parsedData=[];for(var b=[],d=0,e=this.data.length;e>d;d++){var f=this.data.charCodeAt(d);f>65536?(b[0]=240|(1835008&f)>>>18,b[1]=128|(258048&f)>>>12,b[2]=128|(4032&f)>>>6,b[3]=128|63&f):f>2048?(b[0]=224|(61440&f)>>>12,b[1]=128|(4032&f)>>>6,b[2]=128|63&f):f>128?(b[0]=192|(1984&f)>>>6,b[1]=128|63&f):b[0]=f,this.parsedData=this.parsedData.concat(b)}this.parsedData.length!=this.data.length&&(this.parsedData.unshift(191),this.parsedData.unshift(187),this.parsedData.unshift(239))}function b(a,b){this.typeNumber=a,this.errorCorrectLevel=b,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function i(a,b){if(void 0==a.length)throw new Error(a.length+"/"+b);for(var c=0;c<a.length&&0==a[c];)c++;this.num=new Array(a.length-c+b);for(var d=0;d<a.length-c;d++)this.num[d]=a[d+c]}function j(a,b){this.totalCount=a,this.dataCount=b}function k(){this.buffer=[],this.length=0}function m(){return"undefined"!=typeof CanvasRenderingContext2D}function n(){var a=!1,b=navigator.userAgent;return/android/i.test(b)&&(a=!0,aMat=b.toString().match(/android ([0-9]\.[0-9])/i),aMat&&aMat[1]&&(a=parseFloat(aMat[1]))),a}function r(a,b){for(var c=1,e=s(a),f=0,g=l.length;g>=f;f++){var h=0;switch(b){case d.L:h=l[f][0];break;case d.M:h=l[f][1];break;case d.Q:h=l[f][2];break;case d.H:h=l[f][3]}if(h>=e)break;c++}if(c>l.length)throw new Error("Too long data");return c}function s(a){var b=encodeURI(a).toString().replace(/\%[0-9a-fA-F]{2}/g,"a");return b.length+(b.length!=a?3:0)}a.prototype={getLength:function(){return this.parsedData.length},write:function(a){for(var b=0,c=this.parsedData.length;c>b;b++)a.put(this.parsedData[b],8)}},b.prototype={addData:function(b){var c=new a(b);this.dataList.push(c),this.dataCache=null},isDark:function(a,b){if(0>a||this.moduleCount<=a||0>b||this.moduleCount<=b)throw new Error(a+","+b);return this.modules[a][b]},getModuleCount:function(){return this.moduleCount},make:function(){if(this.typeNumber<1){var a=1;for(a=1;a<40;a++){var b=S(a,0);if(this.dataList.forEach(function(a){var d=new k;b.write(a),b=d}),S(a,0)>=b.getLengthInBits())break}this.typeNumber=a}this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(a,b){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var c=0;c<this.moduleCount;c++){this.modules[c]=new Array(this.moduleCount);for(var d=0;d<this.moduleCount;d++)this.modules[c][d]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(a,b),this.typeNumber>=7&&this.setupTypeNumber(a),null==this.dataCache&&(this.dataCache=b.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,b)},setupPositionProbePattern:function(a,b){for(var c=-1;c<=7;c++)if(!(a+c<=-1||this.moduleCount<=a+c))for(var d=-1;d<=7;d++)b+d<=-1||this.moduleCount<=b+d||(this.modules[a+c][b+d]=c>=0&&c<=6&&(0==d||6==d)||d>=0&&d<=6&&(0==c||6==c)||c>=2&&c<=4&&d>=2&&d<=4?!0:!1)},getBestMaskPattern:function(){for(var a=0,b=0,c=0;c<8;c++){this.makeImpl(!0,c);var d=t.getLostPoint(this);(0==c||a>d)&&(a=d,b=c)}return b},createMovieClip:function(a,b,c){var d=a.createEmptyMovieClip(b,c),e=1;this.make();for(var f=0;f<this.modules.length;f++)for(var g=f*e,h=0;h<this.modules[f].length;h++){var i=h*e,j=this.modules[f][h];j&&(d.beginFill(0,100),d.moveTo(i,g),d.lineTo(i+e,g),d.lineTo(i+e,g+e),d.lineTo(i,g+e),d.endFill())}return d},setupTimingPattern:function(){for(var a=8;a<this.moduleCount-8;a++)null==this.modules[a][6]&&(this.modules[a][6]=a%2==0);for(var b=8;b<this.moduleCount-8;b++)null==this.modules[6][b]&&(this.modules[6][b]=b%2==0)},setupPositionAdjustPattern:function(){for(var a=t.getPatternPosition(this.typeNumber),b=0;b<a.length;b++)for(var c=0;c<a.length;c++){var d=a[b],e=a[c];if(null==this.modules[d][e])for(var f=-2;f<=2;f++)for(var g=-2;g<=2;g++)this.modules[d+f][e+g]=-2==f||2==f||-2==g||2==g||0==f&&0==g?!0:!1}},setupTypeInfo:function(a,b){for(var c=b<<3|a,d=H(c),e=0;e<15;e++){var f=!B(d,e)&&!1;e<6?this.modules[e][8]=f:e<8?this.modules[e+1][8]=f:this.modules[this.moduleCount-15+e][8]=f}for(var g=0;g<15;g++){var h=!B(d,g)&&!1;g<8?this.modules[8][this.moduleCount-g-1]=h:g<9?this.modules[8][15-g-1+1]=h:this.modules[8][15-g-1]=h}this.modules[this.moduleCount-8][8]=!B(d,0)&&!1},setupTypeNumber:function(a){for(var b=H(this.typeNumber),c=0;c<18;c++){var d=!B(b,c)&&!1,e=Math.floor(c/3),f=c%3+this.moduleCount-8-3;this.modules[e][f]=d}for(var g=0;g<18;g++){var h=!B(b,g)&&!1,i=g%3,j=Math.floor(g/3)+this.moduleCount-8-3;this.modules[i][j]=h}},mapData:function(a,b){for(var c=-1,d=this.moduleCount-1,e=7,f=0,g=this.moduleCount-1;g>0;g-=2)for(6==g&&g--;;){for(var h=0;h<2;h++)if(null==this.modules[d][g-h]){var i=!1;f<a.length&&(i=B(a[f],e)),b.isDark(this.typeNumber,i)&&(i=!B(a[f],e)?!0:!1),i?this.modules[d][g-h]=!0:this.modules[d][g-h]=!1,e--,-1==e&&(f++,e=7)}if(d+=c,0>d||this.moduleCount<=d){d-=c,c=-c;break}}}};var c={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8},d={L:1,M:0,Q:3,H:2},e={PATTERN000:0,PATTERN001:1,PATTERN010:2,PATTERN011:3,PATTERN100:4,PATTERN101:5,PATTERN110:6,PATTERN111:7},f=8,g={};for(var h in d)g[d[h]]=h;var l=[[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],[134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],[321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,276,220],[586,450,298,250],[644,504,322,280],[718,560,338,310],[792,624,370,344],[858,666,394,378],[929,711,435,410],[1003,779,468,442],[1091,857,499,478],[1171,911,527,512],[1273,997,560,550],[1367,1059,590,587],[1465,1125,626,628],[1528,1190,658,670],[1628,1264,695,721],[1732,1370,730,764],[1840,1452,775,810],[1952,1538,816,851],[2068,1628,864,896],[2188,1722,913,949],[2308,1809,962,994],[2436,1911,1016,1040],[2562,1997,1072,1084],[2692,2083,1128,1148],[2809,2193,1186,1196],[2953,2306,1253,1261]];b.createData=function(a,c,d){for(var g=e.QRCodeLimitLength.length<=a?e.QRCodeLimitLength[a-1]:0,h=Array(g),i=0,j=!0,k=g-1;k>=0;k-=2){var l=c.MODE_8BIT_BYTE===d[k]?1:c.MODE_8BIT_BYTE===d[k-1]?1:2;if(l>i){var m=a>=12&&a<=22?a-12:a>=23&&a<=26?a-11:a-27?!1:!0;h[k]=new i(d[k],m),h[k-1]=new i(d[k-1],m),i=0}else j?(h[k]=new i(d[k],0),j=!1):(h[k-1]=new i(d[k-1],0),j=!0),i++}return h},i.prototype={getLength:function(){return this.parsedData.length},write:function(a){a.put(this.num,this.totalCount,this.dataCount)}};var o=100;b.getData=function(a){var b=[],d=[];if(null!=a)for(var e=0;e<a.moduleCount;e++)for(var f=0;f<a.moduleCount;f++){var g=a.modules[e][f];null==g?d.push(f,e):b.push(g?1:0)}return{buffer:new Uint8ClampedArray(b),width:a.moduleCount,height:a.moduleCount,diff:d}},b.prototype.getData=function(){return b.getData(this)};var p={};p.getCharCountIndicator=function(a,b){if(b===d.L||b===d.M||b===d.Q)return[l[a][0],l[a][1],l[a][2]];if(b===d.H)return[l[a][3],l[a][3],l[a][3]];return[l[a][0],l[a][1],l[a][2]]},k.prototype={getLengthInBits:function(){return this.length},put:function(a,b){for(var c=0;c<b;c++)this.putBit(B(a,b-c-1)?1:0)},getLengthInBits:function(){return this.length},putBit:function(a){var b=Math.floor(this.length/8);this.buffer.length<=b&&this.buffer.push(0),a&&(this.buffer[b]|=128>>>this.length%8),this.length++}};var q={};q.createBytes=function(a,b){var d=1,e=a.length,f=0,g=0;for(var h in b){if(null==b[h])throw new Error("Not supported mode:"+h);d=b[h],a.length>=d&&(f=h,g=d)}var i=q.rsEcc(f,g),j={};j.getData=function(a){for(var b=[],c=0;c<a.length;c++){var d=a[c];if("QRCode"===d.mode)switch(d.mode){case"Kanji":b.push(4);break;case"Byte":b.push(16);break;case"Number":b.push(1);break;case"Terminator":b.push(0,0,0,0);break;default:throw new Error("Invalid QRCode mode:"+d.mode)}else b.push(d.getLength());for(var e=1,f=0;f<b.length;f++){if(b[f]>0&&e>b[f])throw new Error("Data too long for this QRCode mode");e=b[f]}return a}};var k=[],l=0,m=0;for(var n in a)if(a[n]instanceof Array){var o=!0;if(0===a[n].length)throw new Error("QRCode.Array:"+n+" has no data");for(var p=0;p<a[n].length;p++){var q=a[n][p];if(!(q&&"object"==typeof q&&"string"==typeof q.mode&&"string"==typeof q.data&&"number"==typeof q.getLength))throw new Error("QRCode.Array:"+n+" is not a valid QRCode data array element");if("Auto"!==q.mode&&"Byte"!==q.mode&&"Number"!==q.mode&&"Kanji"!==q.mode)throw new Error("QRCode.Array:"+n+" has invalid QRCode mode:"+q.mode);if(q.data.length>q.getLength())throw new Error("QRCode.Array:"+n+" data is longer than expected length");"Byte"===q.mode&&(q.data=String.fromCharCode.apply(null,new Uint8Array(q.data))),k.push(q)}}}else if("string"==typeof a[n]){var r=new c(a[n]);k.push(r)}else throw new Error("QRCode.Array:"+n+" has no valid data type");k.sort(function(a,b){return b.getLength()-a.getLength()});for(var s=0;s<k.length;s++){var t=k[s];l+=t.getLength(),m+=t.data.length}if(m>e)throw new Error("Data is too long for this QRCode");var u=q.createData(i,f,d,l);if(!u)throw new Error("Cannot create QRCode data");return{data:u,mode:f,ecLevel:d,version:i,dataCache:null}};var s=function(){function a(){this.rsBlock=[],this.buffer=[],this.length=0}return a.prototype={getLengthInBits:function(){return this.length},put:function(a,b){for(var c=0;c<b;c++)this.putBit(B(a,b-c-1)?1:0)},putBit:function(a){var b=Math.floor(this.length/8);this.buffer.length<=b&&this.buffer.push(0),a&&(this.buffer[b]|=128>>>this.length%8),this.length++}}}(),t={};t.getPatternPosition=function(a){return w[a-1]};var u,v=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],w=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]];t.getLostPoint=function(a){for(var b=a.getModuleCount(),c=0,d=0;d<b;d++)for(var e=0;e<b;e++){for(var f=0,g=a.isDark(d,e),h=-1;h<=1;h++)if(!(d+h<0||b<=d+h))for(var i=-1;i<=1;i++)e+i<0||b<=e+i||(0==h&&0==i||(g==a.isDark(d+h,e+i)&&f++));f>5&&(c+=3+f-5)}for(var j=0;j<b-1;j++)for(var k=0;k<b-1;k++){var l=0;a.isDark(j,k)&&l++,a.isDark(j+1,k)&&l++,a.isDark(j,k+1)&&l++,a.isDark(j+1,k+1)&&l++,(0==l||4==l)&&(c+=3)}for(var m=0;m<b;m++)for(var n=0;n<b-6;n++)a.isDark(m,n)&&!a.isDark(m,n+1)&&a.isDark(m,n+2)&&a.isDark(m,n+3)&&a.isDark(m,n+4)&&!a.isDark(m,n+5)&&a.isDark(m,n+6)&&(c+=40);for(var o=0;o<b;o++)for(var p=0;p<b-6;p++)a.isDark(p,o)&&!a.isDark(p+1,o)&&a.isDark(p+2,o)&&a.isDark(p+3,o)&&a.isDark(p+4,o)&&!a.isDark(p+5,o)&&a.isDark(p+6,o)&&(c+=40);for(var q=0,r=0;r<b;r++)for(var s=0;s<b;s++)a.isDark(s,r)&&q++;var t=Math.abs(100*q/b/b-50)/5;return c+=10*t};var y=function(a){for(var b=[],c=a.length,d=0;d<c;d++){var e=a[d];b.push({getCount:function(){return e.getCount()},getData:function(){return e.getData()},getTotalCount:function(a){return e.getTotalCount(a)}})}return b}([new function(){this.getCount=function(a){return a.getModuleCount()*a.getModuleCount()},this.getData=function(a){return a.modules}}]);QRCode=function(a,b){if("string"==typeof a&&(a={text:a}),a=a||{},b=b||{},this._htOption={width:a.width||256,height:a.height||256,typeNumber:a.typeNumber,colorDark:b.colorDark||"#000000",colorLight:b.colorLight||"#ffffff",correctLevel:b.correctLevel||d.H},"string"==typeof a.text&&(a.text=a.text.replace(/^[\s\u3000]+|[\s\u3000]+$/g,"")),this._oQRCode=null,this._htOption.text=a.text,this._htOption.typeNumber&&(this._oQRCode=new b(this._htOption.typeNumber,this._htOption.correctLevel),this._oQRCode.addData(this._htOption.text),this._oQRCode.make()),this._htOption.width&&this._htOption.height&&(this._oQRCode=this._createQRCode(this._htOption.text,this._htOption.correctLevel,this._htOption.typeNumber)),!this._oQRCode)throw new Error("Could not create QRCode")},QRCode.prototype.makeCode=function(a){this._el.innerHTML="";var b=document.createElement("canvas");b.width=this._htOption.width,b.height=this._htOption.height;var c=b.getContext("2d"),d=function(a,b,c){var d=this._oQRCode;if(d){var e=d.getModuleCount(),f=this._htOption.width/e,g=this._htOption.height/e;for(var h in a)if(a.hasOwnProperty(h)){var i=a[h];if("string"==typeof i)for(var j=0;j<i.length;j++){var k=i[j];k>=0&&k<e&&(c?b.fillStyle="#ffffff":b.fillStyle=i,this._drawRect(b,k%this._htOption.width,k%this._htOption.height,f,g))}else for(var l=0;l<e;l++)for(var m=0;m<e;m++){var n=m*e+l;n>=0&&n<i.length&&(i[n]?b.fillStyle="#000000":b.fillStyle="#ffffff",this._drawRect(b,l,m,f,g))}}}.bind(this),e=new y(this._oQRCode),f=e.getData();d(f,this._oQRCode,!1),this._el.appendChild(b)},QRCode.prototype._createQRCode=function(a,b,c){if(""===a||0===a.length)throw new Error("QRCode has no text");if(void 0===c)throw new Error("QRCode typeNumber is not defined");var d=new b(c,b);return d.addData(a),d.make(),d},QRCode.prototype._drawRect=function(a,b,c,d,e){a.fillRect(b*d,c*e,d,e)},QRCode.prototype.makeImage=function(){return this.makeCode(),this._el.firstChild.toDataURL("image/png")},QRCode.CorrectLevel=d}();
 </script>
 <script>
 (function(){
@@ -201,7 +254,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       var self = this;
       return self.getSha().then(function(sha){
         var body = {
-          message: 'Update registrations',
+          message: 'Admin update: ' + new Date().toISOString(),
           content: btoa(unescape(encodeURIComponent(JSON.stringify(data)))),
           sha: sha
         };
@@ -216,39 +269,41 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
   var currentFilter = 'all';
   var currentSearch = '';
+  var voiceEnabled = true;
+  var announcedCheckins = {}; // Track announced check-in IDs
+  var voiceTimer = null;
 
   document.addEventListener('DOMContentLoaded', init);
 
   function init(){
     loadConfigForm();
-    bindBannerUpload();
-    bindBannerRemove();
-    // Load from cloud first, fallback to localStorage
+    bindWechatUpload();
+    bindWechatRemove();
     loadFromCloudFirst();
-    // Set up periodic auto-refresh (every 30s)
+    // Auto refresh every 8 seconds
     setInterval(function(){
       _cloud.fetch().then(function(cloud){
         if(!cloud || !cloud.registrations) return;
+        var oldList = getRegistrations();
         localStorage.setItem('meeting_registrations', JSON.stringify(cloud.registrations));
         loadStats();
         loadTable();
-        if(showUpdateDot) showUpdateDot();
+        // Voice announcement for new check-ins
+        announceNewCheckins(oldList, cloud.registrations);
       }).catch(function(){});
-    }, 30000);
+    }, 8000);
     updateEntryQRLabel();
-    // 从配置恢复入口 URL
     var config = getConfig();
-    if(config.entryUrl){
-      document.getElementById('entry-url-override').value = config.entryUrl;
-    }
+    if(config.entryUrl) document.getElementById('entry-url-override').value = config.entryUrl;
     generateEntryQR();
+    generateCheckinQR();
     bindEntryQR();
+    bindCheckinQR();
     bindSearch();
     bindFilter();
     bindConfigSave();
     bindConfigDownload();
     bindDataOps();
-    // Cloud sync button
     document.getElementById('sync-cloud').addEventListener('click', function(){
       var btn = this;
       btn.textContent = '同步中...';
@@ -256,13 +311,91 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       syncFromCloud();
       setTimeout(function(){ btn.textContent = '🔄 同步云端'; btn.disabled = false; }, 2000);
     });
-    // 刷新二维码按钮
     document.getElementById('refresh-entry-qr').addEventListener('click', function(){
-      generateEntryQR();
-      showToast('二维码已刷新', 'success');
+      generateEntryQR(); showToast('报名二维码已刷新','success');
+    });
+    document.getElementById('refresh-checkin-qr').addEventListener('click', function(){
+      generateCheckinQR(); showToast('签到二维码已刷新','success');
     });
   }
 
+  // ── Voice Announcement ──
+  window.toggleVoice = function(){
+    voiceEnabled = !voiceEnabled;
+    var btn = document.getElementById('btn-voice-toggle');
+    var status = document.getElementById('voice-status');
+    var indicator = document.getElementById('voice-indicator');
+    if(voiceEnabled){
+      btn.textContent = '关闭播报';
+      status.innerHTML = '&#128264; 语音播报：已开启';
+      indicator.classList.add('active');
+      showToast('语音播报已开启','success');
+    } else {
+      btn.textContent = '开启播报';
+      status.innerHTML = '&#128263; 语音播报：已关闭';
+      indicator.classList.remove('active');
+      showToast('语音播报已关闭','error');
+    }
+  };
+
+  window.testVoice = function(){
+    speak('测试播报：尾号8888的朋友，签到成功！');
+  };
+
+  function announceNewCheckins(oldList, newList){
+    if(!voiceEnabled) return;
+    if(!oldList || !newList) return;
+    var oldChecked = {};
+    oldList.forEach(function(r){
+      if(r.checkinStatus === 'checked_in') oldChecked[r.id] = true;
+    });
+    var newChecked = [];
+    newList.forEach(function(r){
+      if(r.checkinStatus === 'checked_in' && !oldChecked[r.id] && !announcedCheckins[r.id]){
+        newChecked.push(r);
+        announcedCheckins[r.id] = true;
+      }
+    });
+    if(newChecked.length === 0) return;
+
+    // Also sync announcedCheckins from localStorage to survive page refresh
+    try{ localStorage.setItem('_announced_checkins', JSON.stringify(announcedCheckins)); }catch(e){}
+
+    // Speak each new check-in
+    newChecked.forEach(function(r, idx){
+      setTimeout(function(){
+        var tail = r.phone ? r.phone.slice(-4) : '未知';
+        speak('尾号' + tail + '的朋友，签到成功！');
+      }, idx * 3000); // Stagger announcements
+    });
+
+    // Update last announcement time
+    var now = new Date();
+    var ts = now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+':'+(now.getSeconds()<10?'0':'')+now.getSeconds();
+    document.getElementById('voice-last').textContent = '最近播报：'+ts;
+  }
+
+  function speak(text){
+    if(!('speechSynthesis' in window)) return;
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'zh-CN';
+    utter.rate = 0.9;
+    utter.pitch = 1.1;
+    utter.volume = 1;
+    // Try to find a Chinese voice
+    var voices = window.speechSynthesis.getVoices();
+    for(var i=0; i<voices.length; i++){
+      if(voices[i].lang.indexOf('zh') === 0){
+        utter.voice = voices[i];
+        break;
+      }
+    }
+    window.speechSynthesis.speak(utter);
+  }
+
+  // ── Config ──
   function getConfig(){
     try{ return JSON.parse(localStorage.getItem('meeting_config') || '{}'); }catch(e){ return {}; }
   }
@@ -273,7 +406,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   }
   function saveRegistrations(list){
     localStorage.setItem('meeting_registrations', JSON.stringify(list));
-    // Sync to cloud (fire-and-forget)
     var config = getConfig();
     _cloud.push({ registrations: list, config: config, updatedAt: new Date().toISOString() })
       .catch(function(e){ console.log('Cloud push skipped:', e.message); });
@@ -291,13 +423,12 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       }
       loadStats();
       loadTable();
-      // Update entry QR when config changes
       generateEntryQR();
+      generateCheckinQR();
       updateEntryQRLabel();
-      showToast('云端数据已同步', 'success');
+      showToast('云端数据已同步','success');
     }).catch(function(e){
       showToast('云端同步失败: '+e.message, 'error');
-      console.log('Cloud sync failed:', e.message);
     });
   }
 
@@ -310,10 +441,15 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           loadConfigForm();
         }
       }
+      // Restore announced checkins
+      try{
+        var saved = JSON.parse(localStorage.getItem('_announced_checkins') || '{}');
+        announcedCheckins = saved;
+      }catch(e){}
       loadStats();
       loadTable();
     }).catch(function(e){
-      console.log('Cloud load failed, using local data:', e.message);
+      console.log('Cloud load failed:', e.message);
       loadStats();
       loadTable();
     });
@@ -324,16 +460,15 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     document.getElementById('cfg-name').value = c.eventName || '';
     document.getElementById('cfg-date').value = c.eventDate || '';
     document.getElementById('cfg-location').value = c.eventLocation || '';
-    // Load banner preview
-    loadBannerPreview(c);
+    loadWechatPreview(c);
   }
 
-  function loadBannerPreview(c){
-    var img = document.getElementById('cfg-banner-img');
-    var preview = document.getElementById('cfg-banner-preview');
-    var removeBtn = document.getElementById('cfg-banner-remove');
-    if(c.bannerImage){
-      img.src = c.bannerImage;
+  function loadWechatPreview(c){
+    var img = document.getElementById('cfg-wechat-img');
+    var preview = document.getElementById('cfg-wechat-preview');
+    var removeBtn = document.getElementById('cfg-wechat-remove');
+    if(c.wechatQRCode){
+      img.src = c.wechatQRCode;
       img.style.display = 'block';
       preview.classList.add('has-image');
       removeBtn.classList.add('visible');
@@ -345,9 +480,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     }
   }
 
-  function bindBannerUpload(){
-    var fileInput = document.getElementById('cfg-banner-file');
-    fileInput.addEventListener('change', function(e){
+  function bindWechatUpload(){
+    document.getElementById('cfg-wechat-file').addEventListener('change', function(e){
       var file = e.target.files[0];
       if(!file) return;
       if(!file.type.match(/image\//)){ showToast('请选择图片文件','error'); return; }
@@ -356,7 +490,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         var img = new Image();
         img.onload = function(){
           var w = img.width, h = img.height;
-          var maxW = 1500;
+          var maxW = 800;
           if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
           var canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
@@ -364,10 +498,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           ctx.drawImage(img, 0, 0, w, h);
           var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           var config = getConfig();
-          config.bannerImage = dataUrl;
+          config.wechatQRCode = dataUrl;
           setConfig(config);
-          loadBannerPreview(config);
-          showToast('封面图已保存','success');
+          loadWechatPreview(config);
+          showToast('微信客服二维码已保存','success');
         };
         img.src = ev.target.result;
       };
@@ -375,14 +509,14 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     });
   }
 
-  function bindBannerRemove(){
-    document.getElementById('cfg-banner-remove').addEventListener('click', function(e){
+  function bindWechatRemove(){
+    document.getElementById('cfg-wechat-remove').addEventListener('click', function(e){
       e.stopPropagation();
       var config = getConfig();
-      delete config.bannerImage;
+      delete config.wechatQRCode;
       setConfig(config);
-      loadBannerPreview(config);
-      showToast('封面图已移除','success');
+      loadWechatPreview(config);
+      showToast('微信二维码已移除','success');
     });
   }
 
@@ -394,15 +528,14 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         eventDate: document.getElementById('cfg-date').value.trim(),
         eventLocation: document.getElementById('cfg-location').value.trim(),
         entryUrl: document.getElementById('entry-url-override').value.trim(),
-        bannerImage: existing.bannerImage || ''
+        wechatQRCode: existing.wechatQRCode || ''
       };
       setConfig(config);
       updateEntryQRLabel();
-      // Also sync config to cloud
       var list = getRegistrations();
       _cloud.push({ registrations: list, config: config, updatedAt: new Date().toISOString() })
         .catch(function(){});
-      showToast('配置已保存，已同步云端','success');
+      showToast('配置已保存并同步云端','success');
     });
   }
 
@@ -419,7 +552,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('config.json 已下载，告诉我「推送到云端」即可同步','success');
+      showToast('config.json 已下载','success');
     });
   }
 
@@ -541,7 +674,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
   function exportExcel(){
     var list = getRegistrations();
     if(list.length === 0){ showToast('没有数据可导出','error'); return; }
-
     var data = list.map(function(r){
       return {
         '报名编号': r.id,
@@ -554,7 +686,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         '签到时间': r.checkinTime ? fmtTime(r.checkinTime) : ''
       };
     });
-
     var ws = XLSX.utils.json_to_sheet(data);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '报名数据');
@@ -638,6 +769,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     t._timer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
   }
 
+  // ── Entry QR Code ──
   function getEntryURL(){
     var override = document.getElementById('entry-url-override').value.trim();
     if(override) return override;
@@ -646,160 +778,99 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     return origin + path;
   }
 
+  function getCheckinURL(){
+    var override = document.getElementById('checkin-url-override').value.trim();
+    if(override) return override;
+    var origin = window.location.origin;
+    var path = window.location.pathname.replace(/admin\.html$/i, 'checkin.html');
+    return origin + path;
+  }
+
   function updateEntryQRLabel(){
     var config = getConfig();
     var label = document.getElementById('entry-qr-event-label');
-    if(config.eventName){
-      label.textContent = '（当前活动：' + config.eventName + '）';
-    } else {
-      label.textContent = '';
-    }
+    label.textContent = config.eventName ? '（当前活动：' + config.eventName + '）' : '';
   }
 
   function generateEntryQR(){
     var url = getEntryURL();
     var container = document.getElementById('entry-qr-canvas');
-    container.innerHTML = '';
-    // 清除旧缓存
-    window._entryQRDataURL = null;
+    renderQR(container, url, '#1F2937');
+    document.getElementById('entry-url-display').textContent = url;
+  }
 
+  function generateCheckinQR(){
+    var url = getCheckinURL();
+    var container = document.getElementById('checkin-qr-canvas');
+    renderQR(container, url, '#059669');
+    document.getElementById('checkin-url-display').textContent = url;
+  }
+
+  function renderQR(container, url, color){
+    container.innerHTML = '';
     try {
       var div = document.createElement('div');
-      div.id = 'entry-qr-local';
       container.appendChild(div);
       new QRCode(div, {
         text: url,
         width: 200,
         height: 200,
-        colorDark: '#1F2937',
+        colorDark: color,
         colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
       });
-      // 轮询等待 canvas 像素数据就绪后预计算 data URL
-      pollForQRReady(div, 0);
     } catch(e){
-      container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center">二维码生成失败<br/>请刷新重试</div>';
+      container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center">生成失败<br/>请刷新重试</div>';
     }
-
-    document.getElementById('entry-url-display').textContent = url;
-  }
-
-  function pollForQRReady(parent, attempt){
-    var canvas = parent.querySelector('canvas');
-    if(!canvas){
-      // QRCode 可能生成的是 img
-      var img = parent.querySelector('img');
-      if(img && img.complete && img.naturalWidth > 0){
-        var c = document.createElement('canvas');
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        c.getContext('2d').drawImage(img, 0, 0);
-        window._entryQRDataURL = tryGetDataURL(c);
-        return;
-      }
-    }
-    if(canvas && canvas.width > 0 && canvas.height > 0){
-      // 验证 canvas 像素已写入：读一个像素看是否非全0
-      try {
-        var ctx = canvas.getContext('2d');
-        var pixel = ctx.getImageData(10, 10, 1, 1).data;
-        if(pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0 || pixel[3] !== 0){
-          // 像素数据已就绪
-          window._entryQRDataURL = tryGetDataURL(canvas);
-          return;
-        }
-        // 也可能整个画布确实是黑的(QR码的黑块)，检查 (100,100) 位置
-        pixel = ctx.getImageData(Math.floor(canvas.width/2), Math.floor(canvas.height/2), 1, 1).data;
-        if(pixel[3] !== 0){
-          window._entryQRDataURL = tryGetDataURL(canvas);
-          return;
-        }
-      } catch(e){ /* 跨域等异常，继续轮询 */ }
-    }
-    if(attempt < 50){
-      setTimeout(function(){ pollForQRReady(parent, attempt + 1); }, 100);
-    }
-  }
-
-  function tryGetDataURL(canvas){
-    try {
-      var dataUrl = canvas.toDataURL('image/png');
-      if(dataUrl && dataUrl.length > 100) return dataUrl;
-    } catch(e){}
-    return null;
-  }
-
-  function getEntryQRCanvas(){
-    // 如果已有缓存的 data URL，用它创建新 canvas
-    if(window._entryQRDataURL){
-      var img = new Image();
-      img.src = window._entryQRDataURL;
-      // 同步不可靠，创建临时 canvas 用已有 dataURL
-      var c = document.createElement('canvas');
-      c.width = 200;
-      c.height = 200;
-      var ctx = c.getContext('2d');
-      img.onload = function(){ ctx.drawImage(img, 0, 0); };
-      // 立即尝试同步绘制（可能已缓存）
-      if(img.complete){
-        ctx.drawImage(img, 0, 0);
-        return c;
-      }
-    }
-    // fallback: 直接从 DOM 找 canvas
-    var canvas = document.querySelector('#entry-qr-canvas canvas');
-    if(canvas) return canvas;
-    var img = document.querySelector('#entry-qr-canvas img');
-    if(img){
-      var c2 = document.createElement('canvas');
-      c2.width = img.naturalWidth || img.width || 200;
-      c2.height = img.naturalHeight || img.height || 200;
-      c2.getContext('2d').drawImage(img, 0, 0);
-      return c2;
-    }
-    return null;
   }
 
   function bindEntryQR(){
     document.getElementById('download-entry-qr').addEventListener('click', function(){
-      // 优先用预计算的 data URL
-      if(window._entryQRDataURL){
-        downloadDataURL(window._entryQRDataURL);
-        return;
-      }
-      // fallback: 从 canvas 现场取
-      var canvas = getEntryQRCanvas();
-      if(!canvas){ showToast('二维码正在渲染中，请稍后再试','error'); return; }
-      try{
-        var dataUrl = canvas.toDataURL('image/png');
-        if(!dataUrl || dataUrl.length < 100){
-          showToast('二维码渲染未完成，请稍后再试','error');
-          return;
-        }
-        downloadDataURL(dataUrl);
-      }catch(e){
-        showToast('下载失败：'+e.message,'error');
-      }
+      downloadQR('entry-qr-canvas', '会议报名入口二维码');
     });
   }
 
-  function downloadDataURL(dataUrl){
-    // 先尝试新窗口打开图片 → 用户可右键/长按保存
-    var w = window.open('');
-    if(w){
-      w.document.title = '会议报名入口二维码';
-      w.document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5';
-      w.document.body.innerHTML = '<div style="text-align:center;padding:24px"><img src="'+dataUrl+'" style="max-width:100%;height:auto;border:1px solid #e0e0e0;border-radius:8px" /><p style="margin-top:16px;color:#666;font-size:14px">长按图片保存 / 右键另存为</p></div>';
-      showToast('二维码已在新窗口打开，右键/长按保存','success');
+  function bindCheckinQR(){
+    document.getElementById('download-checkin-qr').addEventListener('click', function(){
+      downloadQR('checkin-qr-canvas', '签到处签到二维码');
+    });
+  }
+
+  function downloadQR(containerId, title){
+    var canvas = document.querySelector('#'+containerId+' canvas');
+    var img = document.querySelector('#'+containerId+' img');
+    var dataUrl;
+
+    if(canvas){
+      try{ dataUrl = canvas.toDataURL('image/png'); }catch(e){}
+    }
+    if(!dataUrl && img){
+      var c = document.createElement('canvas');
+      c.width = img.naturalWidth || img.width || 200;
+      c.height = img.naturalHeight || img.height || 200;
+      c.getContext('2d').drawImage(img, 0, 0);
+      try{ dataUrl = c.toDataURL('image/png'); }catch(e){}
+    }
+    if(!dataUrl || dataUrl.length < 100){
+      showToast('二维码渲染未完成，请稍后','error');
       return;
     }
-    // fallback: 弹窗被拦截 → 在页面内展示下载区
+
+    var w = window.open('');
+    if(w){
+      w.document.title = title;
+      w.document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5';
+      w.document.body.innerHTML = '<div style="text-align:center;padding:24px"><img src="'+dataUrl+'" style="max-width:100%;height:auto;border:1px solid #e0e0e0;border-radius:8px" /><p style="margin-top:16px;color:#666;font-size:14px">长按图片保存 / 右键另存为</p></div>';
+      showToast('二维码已在新窗口打开','success');
+      return;
+    }
+
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px;text-align:center;max-width:90%"><h3 style="margin:0 0 16px;color:#1F2937">报名入口二维码</h3><img src="'+dataUrl+'" style="max-width:100%;height:auto;border-radius:8px" /><p style="margin:16px 0 0;color:#6B7280;font-size:13px">长按图片保存 / 右键另存为</p><button style="margin-top:16px;padding:10px 32px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">关闭</button></div>';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:32px;text-align:center;max-width:90%"><h3 style="margin:0 0 16px;color:#1F2937">'+title+'</h3><img src="'+dataUrl+'" style="max-width:100%;height:auto;border-radius:8px" /><p style="margin:16px 0 0;color:#6B7280;font-size:13px">长按图片保存 / 右键另存为</p><button style="margin-top:16px;padding:10px 32px;background:#6366F1;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">关闭</button></div>';
     document.body.appendChild(overlay);
     overlay.addEventListener('click', function(e){
-      if(e.target === overlay) { document.body.removeChild(overlay); }
+      if(e.target === overlay) document.body.removeChild(overlay);
     });
     overlay.querySelector('button').addEventListener('click', function(){
       document.body.removeChild(overlay);
