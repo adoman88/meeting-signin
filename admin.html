@@ -3179,7 +3179,15 @@ if(typeof window!=="undefined")window.qrcode=qrcode;
     if(override) return override;
     var origin = window.location.origin;
     var path = window.location.pathname.replace(/admin\.html$/i, 'checkin.html');
-    return origin + path;
+    var url = origin + path;
+    if(/localhost|127\.0\.0\.1/.test(url)){
+      var prodUrl = 'https://adoman88.github.io/meeting-signin/checkin.html';
+      document.getElementById('checkin-url-override').value = prodUrl;
+      document.getElementById('checkin-url-override').style.border = '2px solid #F59E0B';
+      document.getElementById('checkin-url-override').style.background = '#FFFBEB';
+      return prodUrl;
+    }
+    return url;
   }
 
   function updateEntryQRLabel(){
