@@ -2588,6 +2588,29 @@ if(typeof window!=="undefined")window.qrcode=qrcode;
           body:JSON.stringify(body)
         }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); });
       });
+    },
+    pushConfigJSON: function(config){
+      var self = this;
+      // Get config.json SHA first (may not exist yet)
+      return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/config.json',{
+        headers:{'Authorization':'Bearer '+self.token,'Accept':'application/vnd.github.v3+json'}
+      }).then(function(r){
+        if(!r.ok) throw Error('not found');
+        return r.json();
+      }).then(function(d){ return d.sha; })
+      .catch(function(){ return ''; })  // ignore if file not yet exist, will create
+      .then(function(sha){
+        var body = {
+          message: 'Update config: ' + new Date().toISOString(),
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(config)))),
+        };
+        if(sha) body.sha = sha;
+        return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/config.json',{
+          method:'PUT',
+          headers:{'Authorization':'Bearer '+self.token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+          body:JSON.stringify(body)
+        }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); });
+      });
     }
   };
 
@@ -2928,6 +2951,7 @@ if(typeof window!=="undefined")window.qrcode=qrcode;
       var list = getRegistrations();
       _cloud.push({ registrations: list, config: config, updatedAt: new Date().toISOString() })
         .catch(function(){});
+      _cloud.pushConfigJSON(config).catch(function(){});
       showToast('配置已保存并同步云端','success');
     });
   }
