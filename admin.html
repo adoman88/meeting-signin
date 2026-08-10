@@ -924,6 +924,7 @@ table tr:hover{background:#F9FAFB}
         return;
       }
       try {
+        container.innerHTML = ''; // 清理占位文字
         var div = document.createElement('div');
         container.appendChild(div);
         new QRCode(div, {
