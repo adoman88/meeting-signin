@@ -17,6 +17,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .header-area .event-name.visible{display:block}
 .header-area h1{font-size:22px;font-weight:700;color:#1F2937}
 .header-area .subtitle{font-size:13px;color:#6B7280;margin-top:4px}
+.event-info{font-size:13px;color:#6B7280;margin-top:4px;opacity:0;transition:opacity 0.3s}
+.event-info.visible{opacity:1}
 .container{flex:1;width:100%;max-width:420px;padding:0 20px}
 .card{background:#fff;border-radius:16px;padding:28px 24px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:1px solid #F3F4F6;text-align:center}
 .phone-input-section{}
@@ -69,6 +71,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 <div class="header-area">
   <div class="event-icon">&#128221;</div>
   <div class="event-name" id="event-name-display"></div>
+  <div class="event-info" id="event-info-bar"></div>
   <h1>会议签到</h1>
   <p class="subtitle">请输入报名时填写的手机号</p>
 </div>
@@ -158,6 +161,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
       if(config.eventName){
         el.textContent = config.eventName;
         el.classList.add('visible');
+      }
+      // 日期+时间+地点
+      var infoBar = document.getElementById('event-info-bar');
+      var parts = [];
+      if(config.eventDate){
+        var ds = config.eventDate;
+        if(config.eventTime) ds += '（'+config.eventTime+'）';
+        parts.push(ds);
+      }
+      if(config.eventLocation) parts.push(config.eventLocation);
+      if(parts.length){
+        infoBar.textContent = parts.join('  |  ');
+        infoBar.classList.add('visible');
       }
     }catch(e){}
   }
