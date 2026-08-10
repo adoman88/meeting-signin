@@ -242,7 +242,28 @@ table tr:hover{background:#F9FAFB}
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+// QRCode.js 多源回退加载（jsdelivr 国内常被墙）
+(function loadQRCode(){
+  var sources = [
+    'https://cdn.bootcdn.net/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+    'https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
+  ];
+  function tryLoad(i){
+    if(i >= sources.length){
+      console.warn('QRCode.js 所有 CDN 均加载失败，二维码功能不可用');
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = sources[i];
+    s.onload = function(){ console.log('QRCode loaded from: ' + sources[i]); };
+    s.onerror = function(){ tryLoad(i+1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script>
 <script>
 (function(){
   // ── Cloud Sync Layer (GitHub API) ──
@@ -310,8 +331,6 @@ table tr:hover{background:#F9FAFB}
       }).catch(function(){});
     }, 8000);
     updateEntryQRLabel();
-    var config = getConfig();
-    if(config.entryUrl) document.getElementById('entry-url-override').value = config.entryUrl;
     generateEntryQR();
     generateCheckinQR();
     bindEntryQR();
@@ -856,7 +875,12 @@ table tr:hover{background:#F9FAFB}
     if(override) return override;
     var origin = window.location.origin;
     var path = window.location.pathname.replace(/admin\.html$/i, 'index.html');
-    return origin + path;
+    var url = origin + path;
+    // 本地测试时提示用户设置生产地址
+    if(/localhost|127\.0\.0\.1/.test(url) && !override){
+      document.getElementById('entry-url-display').innerHTML = '<span style="color:#F59E0B">⚠ 当前为本地测试地址，手机无法访问</span><br/>请在上方输入框中填入正式地址（如：https://adoman88.github.io/meeting-signin/index.html）';
+    }
+    return url;
   }
 
   function getCheckinURL(){
@@ -889,20 +913,32 @@ table tr:hover{background:#F9FAFB}
 
   function renderQR(container, url, color){
     container.innerHTML = '';
-    try {
-      var div = document.createElement('div');
-      container.appendChild(div);
-      new QRCode(div, {
-        text: url,
-        width: 200,
-        height: 200,
-        colorDark: color,
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
-      });
-    } catch(e){
-      container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center">生成失败<br/>请刷新重试</div>';
+    function doRender(retries){
+      if(typeof QRCode === 'undefined'){
+        if(retries > 0){
+          container.innerHTML = '<div style="width:200px;height:200px;background:#FEFCE8;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#D97706;font-size:12px;text-align:center;line-height:1.6">正在加载二维码库...<br/>请稍候</div>';
+          setTimeout(function(){ doRender(retries - 1); }, 800);
+          return;
+        }
+        container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center;line-height:1.6">QR库加载失败<br/><small style="color:#9CA3AF">可能是网络问题<br/>请刷新页面重试</small></div>';
+        return;
+      }
+      try {
+        var div = document.createElement('div');
+        container.appendChild(div);
+        new QRCode(div, {
+          text: url,
+          width: 200,
+          height: 200,
+          colorDark: color,
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch(e){
+        container.innerHTML = '<div style="width:200px;height:200px;background:#FEF2F2;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-size:13px;text-align:center">生成失败<br/>请刷新重试</div>';
+      }
     }
+    doRender(20); // 最多等待 20*800ms = 16 秒
   }
 
   function bindEntryQR(){
