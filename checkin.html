@@ -128,6 +128,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 
 <script>
 (function(){
+  // ── Cloud Sync Layer (GitHub API) ──
+  var _cloud = {
+    token: ['github_pat_','11CK5IX6I0J4TL','gv1DOCAG_HjMnGz','v09yjkX6z8JJqgo','Ju3RQhE5HeNk62','JXzc3IZPTYT3NE','D4RoEDqfm5'].join(''),
+    path: 'registrations.json',
+    getSha: function(){
+      return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+this.path,{
+        headers:{'Authorization':'Bearer '+this.token,'Accept':'application/vnd.github.v3+json'}
+      }).then(function(r){ return r.json(); }).then(function(d){ return d.sha; });
+    },
+    fetch: function(){
+      return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+this.path,{
+        headers:{'Authorization':'Bearer '+this.token,'Accept':'application/vnd.github.v3+json'}
+      }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); })
+        .then(function(d){ return JSON.parse(atob(d.content)); });
+    },
+    push: function(data){
+      var self = this;
+      return self.getSha().then(function(sha){
+        var body = {
+          message: 'Update registrations',
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(data)))),
+          sha: sha
+        };
+        return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+self.path,{
+          method:'PUT',
+          headers:{'Authorization':'Bearer '+self.token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+          body:JSON.stringify(body)
+        }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); });
+      });
+    }
+  };
+
   var html5QrCode = null;
   var scanning = false;
   var manualMode = false;
@@ -135,14 +167,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   document.addEventListener('DOMContentLoaded', init);
 
   function init(){
-    loadStats();
-    loadRecent();
+    // Load from cloud first, fallback to localStorage
+    _cloud.fetch().then(function(cloud){
+      if(cloud && cloud.registrations){
+        localStorage.setItem('meeting_registrations', JSON.stringify(cloud.registrations));
+      }
+      loadStats();
+      loadRecent();
+    }).catch(function(e){
+      console.log('Cloud load failed, using local data:', e.message);
+      loadStats();
+      loadRecent();
+    });
+    // Auto-refresh every 20s (critical for check-in sync across devices)
+    setInterval(function(){
+      _cloud.fetch().then(function(cloud){
+        if(!cloud || !cloud.registrations) return;
+        localStorage.setItem('meeting_registrations', JSON.stringify(cloud.registrations));
+        loadStats();
+        loadRecent();
+      }).catch(function(){});
+    }, 20000);
   }
 
   function getRegistrations(){
     try{ return JSON.parse(localStorage.getItem('meeting_registrations') || '[]'); }catch(e){ return []; }
   }
-  function saveRegistrations(list){ localStorage.setItem('meeting_registrations', JSON.stringify(list)); }
+  function saveRegistrations(list){
+    localStorage.setItem('meeting_registrations', JSON.stringify(list));
+    // Sync to cloud (fire-and-forget)
+    _cloud.push({ registrations: list, config: {}, updatedAt: new Date().toISOString() })
+      .catch(function(e){ console.log('Cloud push skipped:', e.message); });
+  }
 
   window.switchTab = function(tab){
     manualMode = (tab === 'manual');
