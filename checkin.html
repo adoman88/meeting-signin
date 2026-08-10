@@ -112,7 +112,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
       return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+this.path,{
         headers:{'Authorization':'Bearer '+this.token,'Accept':'application/vnd.github.v3+json'}
       }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); })
-        .then(function(d){ return JSON.parse(atob(d.content)); });
+        .then(function(d){
+          var bin = atob(d.content);
+          var bytes = new Uint8Array(bin.length);
+          for(var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+          return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+        });
     },
     push: function(data){
       var self = this;
