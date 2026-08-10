@@ -121,6 +121,19 @@ table tr:hover{background:#F9FAFB}
       </div>
     </div>
 
+    <!-- Banner Image Upload -->
+    <div class="upload-field">
+      <div class="label-row">
+        <label style="font-size:12px;font-weight:500;color:#6B7280">活动头图/海报（显示在报名页顶部，建议比例 3:2）</label>
+        <span class="upload-remove" id="cfg-banner-remove">移除</span>
+      </div>
+      <div class="upload-preview" id="cfg-banner-preview" onclick="document.getElementById('cfg-banner-file').click()" style="max-width:100%;aspect-ratio:3/2">
+        <img id="cfg-banner-img" src="" alt="" style="display:none">
+        <span class="preview-placeholder">点击上传<br>活动头图</span>
+      </div>
+      <input type="file" id="cfg-banner-file" accept="image/*" style="display:none">
+    </div>
+
     <!-- WeChat QR Code Upload -->
     <div class="upload-field">
       <div class="label-row">
@@ -279,6 +292,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     loadConfigForm();
     bindWechatUpload();
     bindWechatRemove();
+    bindBannerUpload();
+    bindBannerRemove();
     loadFromCloudFirst();
     // Auto refresh every 8 seconds
     setInterval(function(){
@@ -460,7 +475,25 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     document.getElementById('cfg-name').value = c.eventName || '';
     document.getElementById('cfg-date').value = c.eventDate || '';
     document.getElementById('cfg-location').value = c.eventLocation || '';
+    loadBannerPreview(c);
     loadWechatPreview(c);
+  }
+
+  function loadBannerPreview(c){
+    var img = document.getElementById('cfg-banner-img');
+    var preview = document.getElementById('cfg-banner-preview');
+    var removeBtn = document.getElementById('cfg-banner-remove');
+    if(c.bannerImage){
+      img.src = c.bannerImage;
+      img.style.display = 'block';
+      preview.classList.add('has-image');
+      removeBtn.classList.add('visible');
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      preview.classList.remove('has-image');
+      removeBtn.classList.remove('visible');
+    }
   }
 
   function loadWechatPreview(c){
@@ -520,6 +553,46 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     });
   }
 
+  function bindBannerUpload(){
+    document.getElementById('cfg-banner-file').addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(!file) return;
+      if(!file.type.match(/image\//)){ showToast('请选择图片文件','error'); return; }
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        var img = new Image();
+        img.onload = function(){
+          var w = img.width, h = img.height;
+          var maxW = 1200;
+          if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          var config = getConfig();
+          config.bannerImage = dataUrl;
+          setConfig(config);
+          loadBannerPreview(config);
+          showToast('活动头图已保存','success');
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function bindBannerRemove(){
+    document.getElementById('cfg-banner-remove').addEventListener('click', function(e){
+      e.stopPropagation();
+      var config = getConfig();
+      delete config.bannerImage;
+      setConfig(config);
+      loadBannerPreview(config);
+      showToast('活动头图已移除','success');
+    });
+  }
+
   function bindConfigSave(){
     document.getElementById('save-config').addEventListener('click',function(){
       var existing = getConfig();
@@ -528,6 +601,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         eventDate: document.getElementById('cfg-date').value.trim(),
         eventLocation: document.getElementById('cfg-location').value.trim(),
         entryUrl: document.getElementById('entry-url-override').value.trim(),
+        bannerImage: existing.bannerImage || '',
         wechatQRCode: existing.wechatQRCode || ''
       };
       setConfig(config);
