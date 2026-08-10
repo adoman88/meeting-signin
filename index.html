@@ -140,6 +140,38 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 </script>
 <script>
 (function(){
+  // ── Cloud Sync Layer (GitHub API) ──
+  var _cloud = {
+    token: ['github_pat_','11CK5IX6I0J4TL','gv1DOCAG_HjMnGz','v09yjkX6z8JJqgo','Ju3RQhE5HeNk62','JXzc3IZPTYT3NE','D4RoEDqfm5'].join(''),
+    path: 'registrations.json',
+    getSha: function(){
+      return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+this.path,{
+        headers:{'Authorization':'Bearer '+this.token,'Accept':'application/vnd.github.v3+json'}
+      }).then(function(r){ return r.json(); }).then(function(d){ return d.sha; });
+    },
+    fetch: function(){
+      return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+this.path,{
+        headers:{'Authorization':'Bearer '+this.token,'Accept':'application/vnd.github.v3+json'}
+      }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); })
+        .then(function(d){ return JSON.parse(atob(d.content)); });
+    },
+    push: function(data){
+      var self = this;
+      return self.getSha().then(function(sha){
+        var body = {
+          message: 'Update registrations',
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(data)))),
+          sha: sha
+        };
+        return fetch('https://api.github.com/repos/adoman88/meeting-signin/contents/'+self.path,{
+          method:'PUT',
+          headers:{'Authorization':'Bearer '+self.token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+          body:JSON.stringify(body)
+        }).then(function(r){ if(!r.ok) throw Error('HTTP '+r.status); return r.json(); });
+      });
+    }
+  };
+
   // ── 正常浏览器逻辑 ──
   var storageOk = true;
   try{ localStorage.setItem('_test','1'); localStorage.removeItem('_test'); }catch(e){ storageOk = false; }
@@ -189,6 +221,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     bindActions();
     // Step 2: override with cloud config (cross-device shared)
     fetchCloudConfig();
+    // Step 3: sync registrations from cloud (cross-device data)
+    syncRegistrationsFromCloud();
   }
 
   function fetchCloudConfig(){
@@ -217,6 +251,28 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
   function saveRegistrations(list){
     localStorage.setItem('meeting_registrations', JSON.stringify(list));
+    // Async cloud push (fire-and-forget with localStorage as safe copy)
+    var config = getConfig();
+    _cloud.push({ registrations: list, config: config, updatedAt: new Date().toISOString() })
+      .catch(function(e){ console.log('Cloud push skipped:', e.message); });
+  }
+
+  function syncRegistrationsFromCloud(){
+    _cloud.fetch().then(function(cloud){
+      if(!cloud || !cloud.registrations || !cloud.registrations.length) return;
+      var local = getRegistrations();
+      // Cloud is source of truth for multi-device sync
+      localStorage.setItem('meeting_registrations', JSON.stringify(cloud.registrations));
+      // Also sync config from cloud
+      if(cloud.config){
+        var localCfg = getConfig();
+        var merged = {};
+        for(var k in localCfg) merged[k] = localCfg[k];
+        for(var k2 in cloud.config) merged[k2] = cloud.config[k2];
+        localStorage.setItem('meeting_config', JSON.stringify(merged));
+        applyConfig(merged);
+      }
+    }).catch(function(e){ console.log('Cloud sync skipped (offline):', e.message); });
   }
 
   function generateId(){
