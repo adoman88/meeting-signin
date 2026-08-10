@@ -205,7 +205,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   function loadEventInfo(config){
     var bar = document.getElementById('event-info-bar');
     var parts = [];
-    if(config.eventDate) parts.push(config.eventDate);
+    if(config.eventDate){
+      var dateStr = config.eventDate;
+      if(config.eventTime) dateStr += '（'+config.eventTime+'）';
+      parts.push(dateStr);
+    }
     if(config.eventLocation) parts.push(config.eventLocation);
     if(parts.length){
       bar.textContent = parts.join('  |  ');
