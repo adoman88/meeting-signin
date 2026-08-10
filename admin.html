@@ -2409,8 +2409,12 @@ if(typeof window!=="undefined")window.qrcode=qrcode;
     <h2>活动配置</h2>
     <div class="config-grid">
       <div class="field">
-        <label>活动名称</label>
+        <label>活动主题</label>
         <input type="text" id="cfg-name" placeholder="如：全球太太幸福秀">
+      </div>
+      <div class="field">
+        <label>活动副标题</label>
+        <input type="text" id="cfg-subtitle" placeholder="如：第919届盛典">
       </div>
       <div class="field">
         <label>活动日期</label>
@@ -2782,6 +2786,7 @@ if(typeof window!=="undefined")window.qrcode=qrcode;
   function loadConfigForm(){
     var c = getConfig();
     document.getElementById('cfg-name').value = c.eventName || '';
+    document.getElementById('cfg-subtitle').value = c.eventSubtitle || '';
     document.getElementById('cfg-date').value = c.eventDate || '';
     document.getElementById('cfg-time').value = c.eventTime || '';
     document.getElementById('cfg-location').value = c.eventLocation || '';
@@ -2908,6 +2913,7 @@ if(typeof window!=="undefined")window.qrcode=qrcode;
       var existing = getConfig();
       var config = {
         eventName: document.getElementById('cfg-name').value.trim(),
+        eventSubtitle: document.getElementById('cfg-subtitle').value.trim(),
         eventDate: document.getElementById('cfg-date').value.trim(),
         eventTime: document.getElementById('cfg-time').value.trim(),
         eventLocation: document.getElementById('cfg-location').value.trim(),
